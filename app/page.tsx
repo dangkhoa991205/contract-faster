@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ScrollReveal } from "@/components/scroll-reveal";
 
 export default function LandingPage() {
   return (
@@ -34,7 +35,7 @@ export default function LandingPage() {
           background: #0e0e1a;
           border: 1px solid rgba(255,255,255,0.07);
           border-radius: 10px;
-          padding: 24px;
+          padding: 20px;
           font-family: var(--font-geist-mono), 'Courier New', monospace;
           font-size: 13px;
           line-height: 1.75;
@@ -116,12 +117,6 @@ export default function LandingPage() {
           flex-shrink: 0;
         }
         .divider { border: none; border-top: 1px solid rgba(255,255,255,0.06); }
-        .grid-bg {
-          background-image:
-            linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
-            linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
-          background-size: 64px 64px;
-        }
         .terminal-dot { width: 10px; height: 10px; border-radius: 50%; }
         .check-item {
           display: flex; align-items: flex-start; gap: 10px;
@@ -145,9 +140,33 @@ export default function LandingPage() {
           transition: color 0.2s;
         }
         .logo-item:hover { color: #6b7280; }
+
+        /* Mobile nav toggle */
+        #mobile-menu { display: none; }
+        #mobile-menu-toggle { display: none; }
+        @media (max-width: 767px) {
+          #nav-links { display: none !important; }
+          #mobile-menu-toggle { display: flex; }
+        }
+
+        /* Placeholder highlight */
+        .placeholder-highlight {
+          background: rgba(99,102,241,0.2);
+          color: #c7d2fe;
+          border-radius: 3px;
+          padding: 1px 6px;
+          border: 1px dashed rgba(99,102,241,0.4);
+        }
+        .placeholder-highlight-green {
+          background: rgba(34,197,94,0.15);
+          color: #86efac;
+          border-radius: 3px;
+          padding: 1px 6px;
+          border: 1px dashed rgba(34,197,94,0.3);
+        }
       `}</style>
 
-      {/* ─── DOT GRID OVERLAY ─── */}
+      {/* DOT GRID OVERLAY */}
       <div
         style={{
           position: "fixed",
@@ -160,14 +179,14 @@ export default function LandingPage() {
         }}
       />
 
-      {/* ─── HERO GLOW ─── */}
+      {/* HERO GLOW */}
       <div
         style={{
           position: "absolute",
           top: "-120px",
           left: "50%",
           transform: "translateX(-50%)",
-          width: "600px",
+          width: "min(600px, 100vw)",
           height: "400px",
           background:
             "radial-gradient(ellipse, rgba(99,102,241,0.18) 0%, transparent 70%)",
@@ -178,26 +197,12 @@ export default function LandingPage() {
 
       <div style={{ position: "relative", zIndex: 1 }}>
         {/* ─── NAV ─── */}
-        <nav
-          style={{
-            maxWidth: "1100px",
-            margin: "0 auto",
-            padding: "20px 24px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-          }}
-        >
-          <div style={{ display: "flex", alignItems: "center", gap: "32px" }}>
+        <nav className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4 sm:gap-8">
             {/* Logo */}
             <Link
               href="/"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                textDecoration: "none",
-              }}
+              className="flex items-center gap-2 no-underline"
             >
               <div
                 style={{
@@ -209,6 +214,7 @@ export default function LandingPage() {
                   alignItems: "center",
                   justifyContent: "center",
                   fontSize: 14,
+                  flexShrink: 0,
                 }}
               >
                 ⚡
@@ -219,27 +225,31 @@ export default function LandingPage() {
                   fontWeight: 600,
                   fontSize: 15,
                   letterSpacing: "-0.01em",
+                  whiteSpace: "nowrap",
                 }}
               >
                 Contract Faster
               </span>
             </Link>
-            <div
-              style={{
-                display: "flex",
-                gap: "4px",
-                alignItems: "center",
-              }}
-            >
-              {["Pricing", "Docs", "Blog", "Changelog"].map((item) => (
-                <a key={item} href="#" className="nav-link btn-ghost">
-                  {item}
+
+            {/* Desktop nav links — hidden on mobile */}
+            <div id="nav-links" className="hidden md:flex gap-1 items-center">
+              {[
+                { label: "Pricing", href: "/pricing" },
+                { label: "Docs", href: "#" },
+                { label: "Blog", href: "#" },
+                { label: "Changelog", href: "#" },
+              ].map((item) => (
+                <a key={item.label} href={item.href} className="nav-link btn-ghost">
+                  {item.label}
                 </a>
               ))}
             </div>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <Link href="/auth/login" className="btn-ghost">
+
+          <div className="flex items-center gap-2">
+            {/* Desktop CTA buttons */}
+            <Link href="/auth/login" className="btn-ghost hidden md:inline-flex">
               Sign in
             </Link>
             <Link href="/auth/login" className="btn-primary">
@@ -249,14 +259,7 @@ export default function LandingPage() {
         </nav>
 
         {/* ─── HERO ─── */}
-        <section
-          style={{
-            maxWidth: "760px",
-            margin: "0 auto",
-            padding: "80px 24px 64px",
-            textAlign: "center",
-          }}
-        >
+        <section className="max-w-[760px] mx-auto px-4 sm:px-6 lg:px-8 pt-16 pb-12 sm:pt-20 sm:pb-16 text-center">
           <div className="section-label fade-up">
             <span style={{ color: "#6366f1" }}>✦</span>
             AI-powered · Built for teams
@@ -265,12 +268,12 @@ export default function LandingPage() {
           <h1
             className="fade-up-1"
             style={{
-              fontSize: "clamp(40px, 6vw, 64px)",
+              fontSize: "clamp(36px, 6vw, 64px)",
               fontWeight: 700,
               lineHeight: 1.1,
               letterSpacing: "-0.03em",
               color: "white",
-              margin: "0 0 24px",
+              margin: "0 0 20px",
             }}
           >
             Contracts that close
@@ -289,10 +292,10 @@ export default function LandingPage() {
           <p
             className="fade-up-2"
             style={{
-              fontSize: 18,
+              fontSize: "clamp(15px, 2.5vw, 18px)",
               color: "#9ca3af",
               lineHeight: 1.7,
-              margin: "0 auto 40px",
+              margin: "0 auto 32px",
               maxWidth: 520,
             }}
           >
@@ -302,24 +305,18 @@ export default function LandingPage() {
           </p>
 
           <div
-            className="fade-up-3"
-            style={{
-              display: "flex",
-              gap: "12px",
-              justifyContent: "center",
-              flexWrap: "wrap",
-            }}
+            className="fade-up-3 flex gap-3 justify-center flex-wrap"
           >
             <Link
               href="/auth/login"
-              className="btn-primary"
+              className="btn-primary w-full sm:w-auto justify-center"
               style={{ padding: "12px 24px", fontSize: 15 }}
             >
               Start for free
             </Link>
             <a
               href="#"
-              className="btn-ghost"
+              className="btn-ghost w-full sm:w-auto justify-center"
               style={{
                 padding: "12px 24px",
                 fontSize: 15,
@@ -334,7 +331,7 @@ export default function LandingPage() {
           <div
             className="fade-up-4"
             style={{
-              marginTop: 56,
+              marginTop: 48,
               background: "#0e0e1a",
               border: "1px solid rgba(255,255,255,0.08)",
               borderRadius: 16,
@@ -367,152 +364,162 @@ export default function LandingPage() {
                 Service Agreement · AI filling...
               </div>
             </div>
-            {/* Mockup content */}
+
+            {/* Mockup content — scrollable horizontally on mobile */}
             <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: 0,
-              }}
+              style={{ overflowX: "auto" }}
             >
-              {/* Left: form */}
               <div
                 style={{
-                  padding: "24px",
-                  borderRight: "1px solid rgba(255,255,255,0.06)",
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 0,
+                  minWidth: 480,
                 }}
               >
-                <p
-                  style={{
-                    color: "#6b7280",
-                    fontSize: 11,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    marginBottom: 16,
-                  }}
-                >
-                  Contract Fields
-                </p>
-                {[
-                  { label: "Party A (Provider)", value: "Acme Studio Ltd.", ai: false },
-                  { label: "Party B (Client)", value: "Tech Startup Inc.", ai: false },
-                  { label: "Contract Value", value: "$24,000", ai: true },
-                  { label: "Start Date", value: "June 1, 2026", ai: true },
-                  { label: "Duration", value: "12 months", ai: true },
-                ].map((field) => (
-                  <div key={field.label} style={{ marginBottom: 14 }}>
-                    <div
-                      style={{
-                        display: "flex",
-                        justifyContent: "space-between",
-                        marginBottom: 4,
-                      }}
-                    >
-                      <span style={{ color: "#9ca3af", fontSize: 12 }}>
-                        {field.label}
-                      </span>
-                      {field.ai && (
-                        <span
-                          style={{
-                            color: "#a5b4fc",
-                            fontSize: 10,
-                            background: "rgba(99,102,241,0.12)",
-                            borderRadius: 4,
-                            padding: "1px 6px",
-                          }}
-                        >
-                          AI ✦
-                        </span>
-                      )}
-                    </div>
-                    <div
-                      style={{
-                        background: "rgba(255,255,255,0.04)",
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        borderRadius: 6,
-                        padding: "7px 12px",
-                        fontSize: 13,
-                        color: field.ai ? "#c7d2fe" : "#e5e7eb",
-                      }}
-                    >
-                      {field.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
-              {/* Right: contract preview */}
-              <div style={{ padding: "24px" }}>
-                <p
-                  style={{
-                    color: "#6b7280",
-                    fontSize: 11,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.08em",
-                    marginBottom: 16,
-                  }}
-                >
-                  Preview
-                </p>
+                {/* Left: form */}
                 <div
                   style={{
-                    fontSize: 12,
-                    color: "#6b7280",
-                    lineHeight: 2,
-                    fontFamily: "var(--font-geist-mono)",
+                    padding: "20px",
+                    borderRight: "1px solid rgba(255,255,255,0.06)",
                   }}
                 >
-                  <p style={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 8 }}>
-                    SERVICE AGREEMENT
+                  <p
+                    style={{
+                      color: "#6b7280",
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      marginBottom: 16,
+                    }}
+                  >
+                    Contract Fields
                   </p>
-                  <p>
-                    This Agreement is entered into between{" "}
-                    <span style={{ color: "#a5b4fc" }}>Acme Studio Ltd.</span>{" "}
-                    ("Provider") and{" "}
-                    <span style={{ color: "#a5b4fc" }}>Tech Startup Inc.</span>{" "}
-                    ("Client")...
-                  </p>
-                  <p style={{ marginTop: 8 }}>
-                    Total value:{" "}
-                    <span style={{ color: "#86efac" }}>$24,000</span> over{" "}
-                    <span style={{ color: "#86efac" }}>12 months</span>
-                    , commencing{" "}
-                    <span style={{ color: "#86efac" }}>June 1, 2026</span>.
+                  {[
+                    { label: "Party A (Provider)", value: "Acme Studio Ltd.", ai: false },
+                    { label: "Party B (Client)", value: "Tech Startup Inc.", ai: false },
+                    { label: "Contract Value", value: "$24,000", ai: true },
+                    { label: "Start Date", value: "June 1, 2026", ai: true },
+                    { label: "Duration", value: "12 months", ai: true },
+                  ].map((field) => (
+                    <div key={field.label} style={{ marginBottom: 12 }}>
+                      <div
+                        style={{
+                          display: "flex",
+                          justifyContent: "space-between",
+                          marginBottom: 4,
+                        }}
+                      >
+                        <span style={{ color: "#9ca3af", fontSize: 12 }}>
+                          {field.label}
+                        </span>
+                        {field.ai && (
+                          <span
+                            style={{
+                              color: "#a5b4fc",
+                              fontSize: 10,
+                              background: "rgba(99,102,241,0.12)",
+                              borderRadius: 4,
+                              padding: "1px 6px",
+                            }}
+                          >
+                            AI ✦
+                          </span>
+                        )}
+                      </div>
+                      <div
+                        style={{
+                          background: "rgba(255,255,255,0.04)",
+                          border: "1px solid rgba(255,255,255,0.08)",
+                          borderRadius: 6,
+                          padding: "7px 12px",
+                          fontSize: 13,
+                          color: field.ai ? "#c7d2fe" : "#e5e7eb",
+                        }}
+                      >
+                        {field.value}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Right: contract preview */}
+                <div style={{ padding: "20px" }}>
+                  <p
+                    style={{
+                      color: "#6b7280",
+                      fontSize: 11,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.08em",
+                      marginBottom: 16,
+                    }}
+                  >
+                    Preview
                   </p>
                   <div
                     style={{
-                      marginTop: 16,
-                      height: 1,
-                      background: "rgba(255,255,255,0.06)",
+                      fontSize: 12,
+                      color: "#6b7280",
+                      lineHeight: 2,
+                      fontFamily: "var(--font-geist-mono)",
                     }}
-                  />
-                  {["Payment terms", "Deliverables", "Termination clause"].map(
-                    (s) => (
-                      <div
-                        key={s}
-                        style={{
-                          display: "flex",
-                          alignItems: "center",
-                          gap: 8,
-                          marginTop: 8,
-                        }}
-                      >
-                        <span style={{ color: "#22c55e" }}>✓</span>
-                        <span style={{ color: "#6b7280" }}>{s}</span>
-                      </div>
-                    )
-                  )}
+                  >
+                    <p style={{ color: "#e5e7eb", fontWeight: 600, marginBottom: 8 }}>
+                      SERVICE AGREEMENT
+                    </p>
+                    <p>
+                      This Agreement is entered into between{" "}
+                      <span style={{ color: "#a5b4fc" }}>Acme Studio Ltd.</span>{" "}
+                      (&ldquo;Provider&rdquo;) and{" "}
+                      <span style={{ color: "#a5b4fc" }}>Tech Startup Inc.</span>{" "}
+                      (&ldquo;Client&rdquo;)...
+                    </p>
+                    <p style={{ marginTop: 8 }}>
+                      Total value:{" "}
+                      <span style={{ color: "#86efac" }}>$24,000</span> over{" "}
+                      <span style={{ color: "#86efac" }}>12 months</span>
+                      , commencing{" "}
+                      <span style={{ color: "#86efac" }}>June 1, 2026</span>.
+                    </p>
+                    <div
+                      style={{
+                        marginTop: 16,
+                        height: 1,
+                        background: "rgba(255,255,255,0.06)",
+                      }}
+                    />
+                    {["Payment terms", "Deliverables", "Termination clause"].map(
+                      (s) => (
+                        <div
+                          key={s}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            marginTop: 8,
+                          }}
+                        >
+                          <span style={{ color: "#22c55e" }}>✓</span>
+                          <span style={{ color: "#6b7280" }}>{s}</span>
+                        </div>
+                      )
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
+
             {/* Bottom bar */}
             <div
               style={{
-                padding: "12px 24px",
+                padding: "12px 20px",
                 borderTop: "1px solid rgba(255,255,255,0.06)",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "space-between",
                 background: "#0a0a14",
+                flexWrap: "wrap",
+                gap: 8,
               }}
             >
               <span style={{ color: "#4b5563", fontSize: 12 }}>
@@ -537,1056 +544,913 @@ export default function LandingPage() {
         </section>
 
         {/* ─── TRUSTED BY ─── */}
-        <section
-          style={{
-            padding: "24px 0 64px",
-            borderTop: "1px solid rgba(255,255,255,0.05)",
-            borderBottom: "1px solid rgba(255,255,255,0.05)",
-            overflow: "hidden",
-          }}
-        >
-          <p
+        <ScrollReveal>
+          <section
             style={{
-              textAlign: "center",
-              color: "#374151",
-              fontSize: 12,
-              textTransform: "uppercase",
-              letterSpacing: "0.1em",
-              marginBottom: 24,
+              padding: "24px 0 48px",
+              borderTop: "1px solid rgba(255,255,255,0.05)",
+              borderBottom: "1px solid rgba(255,255,255,0.05)",
+              overflow: "hidden",
             }}
           >
-            Trusted by teams at
-          </p>
-          <div style={{ overflow: "hidden", position: "relative" }}>
-            <div
-              className="marquee-track"
-              style={{ display: "flex", width: "max-content" }}
+            <p
+              style={{
+                textAlign: "center",
+                color: "#374151",
+                fontSize: 12,
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                marginBottom: 24,
+              }}
             >
-              {[
-                "ACME CORP",
-                "VERITAS LAW",
-                "SWIFT BUILD",
-                "NOVA TECH",
-                "PEAK AGENCY",
-                "BRIGHT MEDIA",
-                "STACK HQ",
-                "OPEN VENTURES",
-                "ACME CORP",
-                "VERITAS LAW",
-                "SWIFT BUILD",
-                "NOVA TECH",
-                "PEAK AGENCY",
-                "BRIGHT MEDIA",
-                "STACK HQ",
-                "OPEN VENTURES",
-              ].map((name, i) => (
-                <span key={i} className="logo-item">
-                  {name}
-                </span>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ─── INTEGRATE SECTION ─── */}
-        <section
-          style={{
-            maxWidth: "1100px",
-            margin: "0 auto",
-            padding: "96px 24px",
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 64,
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <div className="section-label">Integrate in minutes</div>
-              <h2
-                style={{
-                  fontSize: 36,
-                  fontWeight: 700,
-                  letterSpacing: "-0.025em",
-                  color: "white",
-                  margin: "0 0 16px",
-                  lineHeight: 1.2,
-                }}
+              Trusted by teams at
+            </p>
+            <div style={{ overflow: "hidden", position: "relative" }}>
+              <div
+                className="marquee-track"
+                style={{ display: "flex", width: "max-content" }}
               >
-                Add to your app
-                <br />
-                with a few lines of code
-              </h2>
-              <p style={{ color: "#6b7280", lineHeight: 1.7, marginBottom: 32 }}>
-                Our SDK handles template loading, AI placeholder detection,
-                field filling, and DOCX generation. Ship contract features in
-                an afternoon, not a sprint.
-              </p>
-              <div style={{ display: "flex", gap: 12 }}>
-                <a href="#" className="btn-primary">
-                  Read the docs →
-                </a>
+                {[
+                  "ACME CORP",
+                  "VERITAS LAW",
+                  "SWIFT BUILD",
+                  "NOVA TECH",
+                  "PEAK AGENCY",
+                  "BRIGHT MEDIA",
+                  "STACK HQ",
+                  "OPEN VENTURES",
+                  "ACME CORP",
+                  "VERITAS LAW",
+                  "SWIFT BUILD",
+                  "NOVA TECH",
+                  "PEAK AGENCY",
+                  "BRIGHT MEDIA",
+                  "STACK HQ",
+                  "OPEN VENTURES",
+                ].map((name, i) => (
+                  <span key={i} className="logo-item">
+                    {name}
+                  </span>
+                ))}
               </div>
             </div>
-            <div className="code-block">
-              <div style={{ color: "#4b5563", marginBottom: 16 }}>
-                {"// Install the SDK"}
-              </div>
-              <div style={{ marginBottom: 20 }}>
-                <span style={{ color: "#6b7280" }}>$ </span>
-                <span style={{ color: "#86efac" }}>
-                  npm install @contractfaster/sdk
-                </span>
-              </div>
+          </section>
+        </ScrollReveal>
+
+        {/* ─── SDK INTEGRATION SECTION ─── */}
+        <ScrollReveal>
+          <section className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
               <div>
-                <span className="token-keyword">import </span>
-                <span className="token-type">{"{ ContractFaster }"}</span>
-                <span className="token-keyword"> from </span>
-                <span className="token-string">
-                  &quot;@contractfaster/sdk&quot;
-                </span>
-                <br />
-                <br />
-                <span className="token-keyword">const </span>
-                <span className="token-var">cf</span>
-                <span> = </span>
-                <span className="token-keyword">new </span>
-                <span className="token-fn">ContractFaster</span>
-                <span>{"({ "}</span>
-                <span className="token-prop">apiKey</span>
-                <span>{": "}</span>
-                <span className="token-string">&quot;cf_live_...&quot;</span>
-                <span>{" })"}</span>
-                <br />
-                <br />
-                <span className="token-keyword">const </span>
-                <span className="token-var">contract</span>
-                <span> = </span>
-                <span className="token-keyword">await </span>
-                <span className="token-var">cf</span>
-                <span>.</span>
-                <span className="token-prop">contracts</span>
-                <span>.</span>
-                <span className="token-fn">create</span>
-                <span>{"({"}</span>
-                <br />
-                {"  "}
-                <span className="token-prop">template</span>
-                <span>{": "}</span>
-                <span className="token-string">
-                  &quot;service-agreement&quot;
-                </span>
-                <span>{","}</span>
-                <br />
-                {"  "}
-                <span className="token-prop">parties</span>
-                <span>{": ["}</span>
-                <br />
-                {"    "}
-                <span>
-                  {"{ "}
-                  <span className="token-prop">name</span>: <span className="token-string">&quot;Acme Corp&quot;</span>,{" "}
-                  <span className="token-prop">role</span>: <span className="token-string">&quot;client&quot;</span>
-                  {" }"}
-                </span>
-                <br />
-                {"  "}
-                <span>{"],"}</span>
-                <br />
-                {"  "}
-                <span className="token-prop">ai</span>
-                <span>{": "}</span>
-                <span className="token-keyword">true</span>
-                <span>{","}</span>
-                <br />
-                {"  "}
-                <span className="token-prop">output</span>
-                <span>{": "}</span>
-                <span className="token-string">&quot;docx&quot;</span>
-                <br />
-                <span>{"}"}</span>
-                <span>)</span>
-                <br />
-                <br />
-                <span className="token-comment">
-                  {"// ✓ Contract ready in < 2 seconds"}
-                </span>
+                <div className="section-label">Integrate in minutes</div>
+                <h2
+                  style={{
+                    fontSize: "clamp(28px, 4vw, 36px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.025em",
+                    color: "white",
+                    margin: "0 0 16px",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Add to your app
+                  <br />
+                  with a few lines of code
+                </h2>
+                <p style={{ color: "#6b7280", lineHeight: 1.7, marginBottom: 32 }}>
+                  Our SDK handles template loading, AI placeholder detection,
+                  field filling, and DOCX generation. Ship contract features in
+                  an afternoon, not a sprint.
+                </p>
+                <div style={{ display: "flex", gap: 12 }}>
+                  <a href="#" className="btn-primary">
+                    Read the docs →
+                  </a>
+                </div>
+              </div>
+
+              {/* Code block — scrollable on mobile */}
+              <div className="code-block overflow-x-auto">
+                <div style={{ color: "#4b5563", marginBottom: 16 }}>
+                  {"// Install the SDK"}
+                </div>
+                <div style={{ marginBottom: 20 }}>
+                  <span style={{ color: "#6b7280" }}>$ </span>
+                  <span style={{ color: "#86efac" }}>
+                    npm install @contractfaster/sdk
+                  </span>
+                </div>
+                <div>
+                  <span className="token-keyword">import </span>
+                  <span className="token-type">{"{ ContractFaster }"}</span>
+                  <span className="token-keyword"> from </span>
+                  <span className="token-string">
+                    &quot;@contractfaster/sdk&quot;
+                  </span>
+                  <br />
+                  <br />
+                  <span className="token-keyword">const </span>
+                  <span className="token-var">cf</span>
+                  <span> = </span>
+                  <span className="token-keyword">new </span>
+                  <span className="token-fn">ContractFaster</span>
+                  <span>{"({ "}</span>
+                  <span className="token-prop">apiKey</span>
+                  <span>{": "}</span>
+                  <span className="token-string">&quot;cf_live_...&quot;</span>
+                  <span>{" })"}</span>
+                  <br />
+                  <br />
+                  <span className="token-keyword">const </span>
+                  <span className="token-var">contract</span>
+                  <span> = </span>
+                  <span className="token-keyword">await </span>
+                  <span className="token-var">cf</span>
+                  <span>.</span>
+                  <span className="token-prop">contracts</span>
+                  <span>.</span>
+                  <span className="token-fn">create</span>
+                  <span>{"({"}</span>
+                  <br />
+                  {"  "}
+                  <span className="token-prop">template</span>
+                  <span>{": "}</span>
+                  <span className="token-string">
+                    &quot;service-agreement&quot;
+                  </span>
+                  <span>{","}</span>
+                  <br />
+                  {"  "}
+                  <span className="token-prop">parties</span>
+                  <span>{": ["}</span>
+                  <br />
+                  {"    "}
+                  <span>
+                    {"{ "}
+                    <span className="token-prop">name</span>: <span className="token-string">&quot;Acme Corp&quot;</span>,{" "}
+                    <span className="token-prop">role</span>: <span className="token-string">&quot;client&quot;</span>
+                    {" }"}
+                  </span>
+                  <br />
+                  {"  "}
+                  <span>{"],"}</span>
+                  <br />
+                  {"  "}
+                  <span className="token-prop">ai</span>
+                  <span>{": "}</span>
+                  <span className="token-keyword">true</span>
+                  <span>{","}</span>
+                  <br />
+                  {"  "}
+                  <span className="token-prop">output</span>
+                  <span>{": "}</span>
+                  <span className="token-string">&quot;docx&quot;</span>
+                  <br />
+                  <span>{"}"}</span>
+                  <span>)</span>
+                  <br />
+                  <br />
+                  <span className="token-comment">
+                    {"// ✓ Contract ready in < 2 seconds"}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </ScrollReveal>
 
         <hr className="divider" />
 
         {/* ─── DEVELOPER EXPERIENCE ─── */}
-        <section
-          style={{
-            maxWidth: "1100px",
-            margin: "0 auto",
-            padding: "96px 24px",
-          }}
-        >
-          <div style={{ textAlign: "center", marginBottom: 64 }}>
-            <div className="section-label" style={{ display: "inline-flex" }}>
-              Developer experience
-            </div>
-            <h2
-              style={{
-                fontSize: 36,
-                fontWeight: 700,
-                letterSpacing: "-0.025em",
-                color: "white",
-                margin: "0 auto",
-                maxWidth: 500,
-                lineHeight: 1.2,
-              }}
-            >
-              First-class developer
-              <br />
-              experience
-            </h2>
-          </div>
-
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 24 }}>
-            {/* CLI card */}
-            <div
-              className="glow-card"
-              style={{ padding: "28px", gridRow: "span 2" }}
-            >
-              <div style={{ marginBottom: 20 }}>
-                <span className="feature-icon">🖥️</span>
+        <ScrollReveal>
+          <section className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+            <div className="text-center mb-12 sm:mb-16">
+              <div className="section-label" style={{ display: "inline-flex" }}>
+                Developer experience
               </div>
-              <h3
-                style={{
-                  color: "white",
-                  fontWeight: 600,
-                  fontSize: 18,
-                  marginBottom: 8,
-                }}
-              >
-                Powerful CLI
-              </h3>
-              <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
-                Generate contracts, manage templates, and preview outputs
-                straight from your terminal.
-              </p>
-              <div className="code-block" style={{ fontSize: 12 }}>
-                <div>
-                  <span style={{ color: "#6b7280" }}>$ </span>
-                  <span className="token-fn">cf</span>
-                  <span> generate </span>
-                  <span className="token-string">service-agreement</span>
-                </div>
-                <div style={{ marginTop: 8, color: "#22c55e" }}>
-                  ✓ Template loaded (6 placeholders)
-                </div>
-                <div style={{ color: "#22c55e" }}>✓ AI filled 4 fields</div>
-                <div style={{ color: "#22c55e" }}>✓ Exported → output.docx</div>
-                <div style={{ marginTop: 8, color: "#4b5563" }}>
-                  Done in 1.8s
-                </div>
-              </div>
-            </div>
-
-            {/* TypeScript card */}
-            <div className="glow-card" style={{ padding: "28px" }}>
-              <div style={{ marginBottom: 16 }}>
-                <span className="feature-icon">🔷</span>
-              </div>
-              <h3
-                style={{
-                  color: "white",
-                  fontWeight: 600,
-                  fontSize: 16,
-                  marginBottom: 8,
-                }}
-              >
-                TypeScript-first SDK
-              </h3>
-              <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.6 }}>
-                Full type safety for every template, field, and output. Your
-                IDE knows the shape of every contract.
-              </p>
-            </div>
-
-            {/* Webhooks card */}
-            <div className="glow-card" style={{ padding: "28px" }}>
-              <div style={{ marginBottom: 16 }}>
-                <span className="feature-icon">🔗</span>
-              </div>
-              <h3
-                style={{
-                  color: "white",
-                  fontWeight: 600,
-                  fontSize: 16,
-                  marginBottom: 8,
-                }}
-              >
-                Webhooks & Events
-              </h3>
-              <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.6 }}>
-                Get notified when contracts are created, signed, or expired.
-                Build automations on top.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        <hr className="divider" />
-
-        {/* ─── EDITOR SECTION ─── */}
-        <section
-          style={{
-            maxWidth: "1100px",
-            margin: "0 auto",
-            padding: "96px 24px",
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 64,
-              alignItems: "center",
-            }}
-          >
-            {/* Editor mockup */}
-            <div
-              style={{
-                background: "#0e0e1a",
-                border: "1px solid rgba(255,255,255,0.07)",
-                borderRadius: 16,
-                overflow: "hidden",
-                boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
-              }}
-            >
-              <div
-                style={{
-                  padding: "12px 16px",
-                  borderBottom: "1px solid rgba(255,255,255,0.06)",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 16,
-                  background: "#0a0a14",
-                }}
-              >
-                <div style={{ display: "flex", gap: 6 }}>
-                  <div className="terminal-dot" style={{ background: "#374151" }} />
-                  <div className="terminal-dot" style={{ background: "#374151" }} />
-                  <div className="terminal-dot" style={{ background: "#374151" }} />
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 16,
-                    fontSize: 12,
-                    color: "#4b5563",
-                  }}
-                >
-                  {["Editor", "Preview", "AI Chat"].map((tab, i) => (
-                    <span
-                      key={tab}
-                      style={{
-                        color: i === 0 ? "white" : "#4b5563",
-                        paddingBottom: 2,
-                        borderBottom: i === 0 ? "1px solid #6366f1" : "none",
-                      }}
-                    >
-                      {tab}
-                    </span>
-                  ))}
-                </div>
-              </div>
-              <div style={{ padding: "24px" }}>
-                {/* Toolbar */}
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 8,
-                    marginBottom: 16,
-                    padding: "8px",
-                    background: "rgba(255,255,255,0.03)",
-                    borderRadius: 8,
-                    border: "1px solid rgba(255,255,255,0.06)",
-                  }}
-                >
-                  {["B", "I", "U", "|", "H1", "H2", "|", "⟨⟩"].map(
-                    (btn, i) => (
-                      <button
-                        key={i}
-                        style={{
-                          background: "none",
-                          border: "none",
-                          color: btn === "|" ? "#374151" : "#6b7280",
-                          fontSize: 12,
-                          cursor: "pointer",
-                          padding: "4px 8px",
-                          borderRadius: 4,
-                          fontWeight: btn === "B" ? 700 : 400,
-                        }}
-                      >
-                        {btn}
-                      </button>
-                    )
-                  )}
-                  <div style={{ marginLeft: "auto" }}>
-                    <span
-                      style={{
-                        background: "rgba(99,102,241,0.15)",
-                        color: "#a5b4fc",
-                        borderRadius: 4,
-                        padding: "3px 8px",
-                        fontSize: 11,
-                      }}
-                    >
-                      ✦ AI Assist
-                    </span>
-                  </div>
-                </div>
-                {/* Editor content */}
-                <div
-                  style={{
-                    fontFamily: "var(--font-geist-mono)",
-                    fontSize: 13,
-                    lineHeight: 2,
-                    color: "#9ca3af",
-                  }}
-                >
-                  <p
-                    style={{
-                      color: "white",
-                      fontSize: 15,
-                      fontWeight: 600,
-                      marginBottom: 12,
-                    }}
-                  >
-                    SERVICE AGREEMENT
-                  </p>
-                  <p>
-                    This Service Agreement (&quot;Agreement&quot;) is made as
-                    of{" "}
-                    <span
-                      style={{
-                        background: "rgba(99,102,241,0.2)",
-                        color: "#c7d2fe",
-                        borderRadius: 3,
-                        padding: "1px 6px",
-                        border: "1px dashed rgba(99,102,241,0.4)",
-                      }}
-                    >
-                      START_DATE
-                    </span>{" "}
-                    between...
-                  </p>
-                  <p style={{ marginTop: 8 }}>
-                    <span
-                      style={{
-                        background: "rgba(99,102,241,0.2)",
-                        color: "#c7d2fe",
-                        borderRadius: 3,
-                        padding: "1px 6px",
-                        border: "1px dashed rgba(99,102,241,0.4)",
-                      }}
-                    >
-                      PROVIDER_NAME
-                    </span>{" "}
-                    agrees to provide{" "}
-                    <span
-                      style={{
-                        background: "rgba(99,102,241,0.2)",
-                        color: "#c7d2fe",
-                        borderRadius: 3,
-                        padding: "1px 6px",
-                        border: "1px dashed rgba(99,102,241,0.4)",
-                      }}
-                    >
-                      SERVICES
-                    </span>{" "}
-                    for a total of{" "}
-                    <span
-                      style={{
-                        background: "rgba(34,197,94,0.15)",
-                        color: "#86efac",
-                        borderRadius: 3,
-                        padding: "1px 6px",
-                        border: "1px dashed rgba(34,197,94,0.3)",
-                      }}
-                    >
-                      CONTRACT_VALUE
-                    </span>
-                    .
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div>
-              <div className="section-label">Beautiful editor</div>
               <h2
                 style={{
-                  fontSize: 36,
+                  fontSize: "clamp(28px, 4vw, 36px)",
                   fontWeight: 700,
                   letterSpacing: "-0.025em",
                   color: "white",
-                  margin: "0 0 16px",
+                  margin: "0 auto",
+                  maxWidth: 500,
                   lineHeight: 1.2,
                 }}
               >
-                Write using a
+                First-class developer
                 <br />
-                delightful editor
+                experience
               </h2>
-              <p style={{ color: "#6b7280", lineHeight: 1.7, marginBottom: 32 }}>
-                Our rich-text editor highlights every placeholder in your
-                template. Click any field to fill it — or let AI handle it for
-                you.
-              </p>
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                {[
-                  {
-                    icon: "⚡",
-                    title: "Instant placeholder detection",
-                    desc: "Upload any .docx — AI finds every fill-in spot automatically.",
-                  },
-                  {
-                    icon: "🤖",
-                    title: "Smart fill suggestions",
-                    desc: "AI suggests values based on context, saving you typing.",
-                  },
-                  {
-                    icon: "💬",
-                    title: "Ask AI about any clause",
-                    desc: "Chat sidebar explains legal language in plain English.",
-                  },
-                ].map((item) => (
-                  <div
-                    key={item.title}
-                    style={{ display: "flex", gap: 16, alignItems: "flex-start" }}
+            </div>
+
+            {/* Cards: 1 col mobile → 2 col desktop (CLI card spans 2 rows on desktop) */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* CLI card */}
+              <ScrollReveal delay={0} className="md:row-span-2">
+                <div className="glow-card h-full" style={{ padding: "28px" }}>
+                  <div style={{ marginBottom: 20 }}>
+                    <span className="feature-icon">🖥️</span>
+                  </div>
+                  <h3
+                    style={{
+                      color: "white",
+                      fontWeight: 600,
+                      fontSize: 18,
+                      marginBottom: 8,
+                    }}
                   >
-                    <div className="feature-icon">{item.icon}</div>
+                    Powerful CLI
+                  </h3>
+                  <p style={{ color: "#6b7280", fontSize: 14, lineHeight: 1.6, marginBottom: 24 }}>
+                    Generate contracts, manage templates, and preview outputs
+                    straight from your terminal.
+                  </p>
+                  <div className="code-block" style={{ fontSize: 12 }}>
                     <div>
-                      <p
-                        style={{
-                          color: "white",
-                          fontWeight: 500,
-                          fontSize: 14,
-                          marginBottom: 4,
-                        }}
-                      >
-                        {item.title}
-                      </p>
-                      <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.6 }}>
-                        {item.desc}
-                      </p>
+                      <span style={{ color: "#6b7280" }}>$ </span>
+                      <span className="token-fn">cf</span>
+                      <span> generate </span>
+                      <span className="token-string">service-agreement</span>
+                    </div>
+                    <div style={{ marginTop: 8, color: "#22c55e" }}>
+                      ✓ Template loaded (6 placeholders)
+                    </div>
+                    <div style={{ color: "#22c55e" }}>✓ AI filled 4 fields</div>
+                    <div style={{ color: "#22c55e" }}>✓ Exported → output.docx</div>
+                    <div style={{ marginTop: 8, color: "#4b5563" }}>
+                      Done in 1.8s
                     </div>
                   </div>
-                ))}
+                </div>
+              </ScrollReveal>
+
+              {/* TypeScript card */}
+              <ScrollReveal delay={100}>
+                <div className="glow-card h-full" style={{ padding: "28px" }}>
+                  <div style={{ marginBottom: 16 }}>
+                    <span className="feature-icon">🔷</span>
+                  </div>
+                  <h3
+                    style={{
+                      color: "white",
+                      fontWeight: 600,
+                      fontSize: 16,
+                      marginBottom: 8,
+                    }}
+                  >
+                    TypeScript-first SDK
+                  </h3>
+                  <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.6 }}>
+                    Full type safety for every template, field, and output. Your
+                    IDE knows the shape of every contract.
+                  </p>
+                </div>
+              </ScrollReveal>
+
+              {/* Webhooks card */}
+              <ScrollReveal delay={200}>
+                <div className="glow-card h-full" style={{ padding: "28px" }}>
+                  <div style={{ marginBottom: 16 }}>
+                    <span className="feature-icon">🔗</span>
+                  </div>
+                  <h3
+                    style={{
+                      color: "white",
+                      fontWeight: 600,
+                      fontSize: 16,
+                      marginBottom: 8,
+                    }}
+                  >
+                    Webhooks & Events
+                  </h3>
+                  <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.6 }}>
+                    Get notified when contracts are created, signed, or expired.
+                    Build automations on top.
+                  </p>
+                </div>
+              </ScrollReveal>
+            </div>
+          </section>
+        </ScrollReveal>
+
+        <hr className="divider" />
+
+        {/* ─── AI EDITOR SECTION ─── */}
+        <ScrollReveal>
+          <section className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
+              {/* Editor mockup */}
+              <div
+                style={{
+                  background: "#0e0e1a",
+                  border: "1px solid rgba(255,255,255,0.07)",
+                  borderRadius: 16,
+                  overflow: "hidden",
+                  boxShadow: "0 24px 60px rgba(0,0,0,0.5)",
+                }}
+              >
+                <div
+                  style={{
+                    padding: "12px 16px",
+                    borderBottom: "1px solid rgba(255,255,255,0.06)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 16,
+                    background: "#0a0a14",
+                  }}
+                >
+                  <div style={{ display: "flex", gap: 6 }}>
+                    <div className="terminal-dot" style={{ background: "#374151" }} />
+                    <div className="terminal-dot" style={{ background: "#374151" }} />
+                    <div className="terminal-dot" style={{ background: "#374151" }} />
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 16,
+                      fontSize: 12,
+                      color: "#4b5563",
+                    }}
+                  >
+                    {["Editor", "Preview", "AI Chat"].map((tab, i) => (
+                      <span
+                        key={tab}
+                        style={{
+                          color: i === 0 ? "white" : "#4b5563",
+                          paddingBottom: 2,
+                          borderBottom: i === 0 ? "1px solid #6366f1" : "none",
+                          cursor: "pointer",
+                        }}
+                      >
+                        {tab}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+                <div style={{ padding: "20px" }}>
+                  {/* Toolbar */}
+                  <div
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      marginBottom: 16,
+                      padding: "8px",
+                      background: "rgba(255,255,255,0.03)",
+                      borderRadius: 8,
+                      border: "1px solid rgba(255,255,255,0.06)",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {["B", "I", "U", "|", "H1", "H2", "|", "⟨⟩"].map(
+                      (btn, i) => (
+                        <button
+                          key={i}
+                          style={{
+                            background: "none",
+                            border: "none",
+                            color: btn === "|" ? "#374151" : "#6b7280",
+                            fontSize: 12,
+                            cursor: "pointer",
+                            padding: "4px 8px",
+                            borderRadius: 4,
+                            fontWeight: btn === "B" ? 700 : 400,
+                          }}
+                        >
+                          {btn}
+                        </button>
+                      )
+                    )}
+                    <div style={{ marginLeft: "auto" }}>
+                      <span
+                        style={{
+                          background: "rgba(99,102,241,0.15)",
+                          color: "#a5b4fc",
+                          borderRadius: 4,
+                          padding: "3px 8px",
+                          fontSize: 11,
+                        }}
+                      >
+                        ✦ AI Assist
+                      </span>
+                    </div>
+                  </div>
+                  {/* Editor content */}
+                  <div
+                    style={{
+                      fontFamily: "var(--font-geist-mono)",
+                      fontSize: 13,
+                      lineHeight: 2,
+                      color: "#9ca3af",
+                    }}
+                  >
+                    <p
+                      style={{
+                        color: "white",
+                        fontSize: 15,
+                        fontWeight: 600,
+                        marginBottom: 12,
+                      }}
+                    >
+                      SERVICE AGREEMENT
+                    </p>
+                    <p>
+                      This Service Agreement (&quot;Agreement&quot;) is made as
+                      of{" "}
+                      <span className="placeholder-highlight">START_DATE</span>{" "}
+                      between...
+                    </p>
+                    <p style={{ marginTop: 8 }}>
+                      <span className="placeholder-highlight">PROVIDER_NAME</span>{" "}
+                      agrees to provide{" "}
+                      <span className="placeholder-highlight">SERVICES</span>{" "}
+                      for a total of{" "}
+                      <span className="placeholder-highlight-green">CONTRACT_VALUE</span>
+                      .
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div>
+                <div className="section-label">Beautiful editor</div>
+                <h2
+                  style={{
+                    fontSize: "clamp(28px, 4vw, 36px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.025em",
+                    color: "white",
+                    margin: "0 0 16px",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Write using a
+                  <br />
+                  delightful editor
+                </h2>
+                <p style={{ color: "#6b7280", lineHeight: 1.7, marginBottom: 32 }}>
+                  Our rich-text editor highlights every placeholder in your
+                  template. Click any field to fill it — or let AI handle it for
+                  you.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                  {[
+                    {
+                      icon: "⚡",
+                      title: "Instant placeholder detection",
+                      desc: "Upload any .docx — AI finds every fill-in spot automatically.",
+                    },
+                    {
+                      icon: "🤖",
+                      title: "Smart fill suggestions",
+                      desc: "AI suggests values based on context, saving you typing.",
+                    },
+                    {
+                      icon: "💬",
+                      title: "Ask AI about any clause",
+                      desc: "Chat sidebar explains legal language in plain English.",
+                    },
+                  ].map((item, idx) => (
+                    <ScrollReveal key={item.title} delay={idx * 100}>
+                      <div style={{ display: "flex", gap: 16, alignItems: "flex-start" }}>
+                        <div className="feature-icon">{item.icon}</div>
+                        <div>
+                          <p
+                            style={{
+                              color: "white",
+                              fontWeight: 500,
+                              fontSize: 14,
+                              marginBottom: 4,
+                            }}
+                          >
+                            {item.title}
+                          </p>
+                          <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.6 }}>
+                            {item.desc}
+                          </p>
+                        </div>
+                      </div>
+                    </ScrollReveal>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </ScrollReveal>
 
         <hr className="divider" />
 
         {/* ─── GO BEYOND ─── */}
-        <section
-          style={{
-            maxWidth: "1100px",
-            margin: "0 auto",
-            padding: "96px 24px",
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 64,
-              alignItems: "center",
-            }}
-          >
-            <div>
-              <div className="section-label">Go beyond templates</div>
-              <h2
-                style={{
-                  fontSize: 36,
-                  fontWeight: 700,
-                  letterSpacing: "-0.025em",
-                  color: "white",
-                  margin: "0 0 16px",
-                  lineHeight: 1.2,
-                }}
-              >
-                Contract management
-                <br />
-                for your whole team
-              </h2>
-              <p style={{ color: "#6b7280", lineHeight: 1.7, marginBottom: 32 }}>
-                Share templates with teammates, track every contract in one
-                dashboard, and never lose a signed document again.
-              </p>
-              <div
-                style={{
-                  background: "rgba(255,255,255,0.03)",
-                  border: "1px solid rgba(255,255,255,0.07)",
-                  borderRadius: 12,
-                  overflow: "hidden",
-                }}
-              >
-                {[
-                  {
-                    emoji: "📁",
-                    name: "Templates",
-                    count: "12 shared",
-                    color: "#a5b4fc",
-                  },
-                  {
-                    emoji: "📝",
-                    name: "Active contracts",
-                    count: "34 this month",
-                    color: "#86efac",
-                  },
-                  {
-                    emoji: "👥",
-                    name: "Team members",
-                    count: "8 people",
-                    color: "#fde68a",
-                  },
-                  {
-                    emoji: "⚡",
-                    name: "Avg. time to sign",
-                    count: "< 4 hours",
-                    color: "#f9a8d4",
-                  },
-                ].map((item, i, arr) => (
-                  <div
-                    key={item.name}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      padding: "14px 20px",
-                      borderBottom:
-                        i < arr.length - 1
-                          ? "1px solid rgba(255,255,255,0.05)"
-                          : "none",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                      <span style={{ fontSize: 16 }}>{item.emoji}</span>
-                      <span style={{ color: "#9ca3af", fontSize: 14 }}>
-                        {item.name}
-                      </span>
-                    </div>
-                    <span
+        <ScrollReveal>
+          <section className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-16 items-center">
+              <div>
+                <div className="section-label">Go beyond templates</div>
+                <h2
+                  style={{
+                    fontSize: "clamp(28px, 4vw, 36px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.025em",
+                    color: "white",
+                    margin: "0 0 16px",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Contract management
+                  <br />
+                  for your whole team
+                </h2>
+                <p style={{ color: "#6b7280", lineHeight: 1.7, marginBottom: 32 }}>
+                  Share templates with teammates, track every contract in one
+                  dashboard, and never lose a signed document again.
+                </p>
+                <div
+                  style={{
+                    background: "rgba(255,255,255,0.03)",
+                    border: "1px solid rgba(255,255,255,0.07)",
+                    borderRadius: 12,
+                    overflow: "hidden",
+                  }}
+                >
+                  {[
+                    { emoji: "📁", name: "Templates", count: "12 shared", color: "#a5b4fc" },
+                    { emoji: "📝", name: "Active contracts", count: "34 this month", color: "#86efac" },
+                    { emoji: "👥", name: "Team members", count: "8 people", color: "#fde68a" },
+                    { emoji: "⚡", name: "Avg. time to sign", count: "< 4 hours", color: "#f9a8d4" },
+                  ].map((item, i, arr) => (
+                    <div
+                      key={item.name}
                       style={{
-                        color: item.color,
-                        fontSize: 13,
-                        fontWeight: 500,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between",
+                        padding: "14px 20px",
+                        borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.05)" : "none",
                       }}
                     >
-                      {item.count}
-                    </span>
-                  </div>
-                ))}
+                      <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                        <span style={{ fontSize: 16 }}>{item.emoji}</span>
+                        <span style={{ color: "#9ca3af", fontSize: 14 }}>{item.name}</span>
+                      </div>
+                      <span style={{ color: item.color, fontSize: 13, fontWeight: 500 }}>
+                        {item.count}
+                      </span>
+                    </div>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div>
-              <div className="section-label">AI everywhere</div>
-              <h2
-                style={{
-                  fontSize: 36,
-                  fontWeight: 700,
-                  letterSpacing: "-0.025em",
-                  color: "white",
-                  margin: "0 0 16px",
-                  lineHeight: 1.2,
-                }}
-              >
-                Build with AI
-                <br />
-                on every step
-              </h2>
-              <p style={{ color: "#6b7280", lineHeight: 1.7, marginBottom: 32 }}>
-                From detecting what needs to be filled, to suggesting values,
-                to explaining clauses — GPT-4o is embedded throughout the
-                workflow.
-              </p>
-              <div className="code-block" style={{ fontSize: 12 }}>
-                <span className="token-comment">{"// AI Chat API"}</span>
-                <br />
-                <span className="token-keyword">const </span>
-                <span className="token-var">reply</span>
-                <span> = </span>
-                <span className="token-keyword">await </span>
-                <span className="token-var">cf</span>
-                <span>.</span>
-                <span className="token-fn">ai</span>
-                <span>.</span>
-                <span className="token-fn">ask</span>
-                <span>{"({"}</span>
-                <br />
-                {"  "}
-                <span className="token-prop">contractId</span>
-                <span>{": "}</span>
-                <span className="token-string">&quot;ctr_abc123&quot;</span>
-                <span>{","}</span>
-                <br />
-                {"  "}
-                <span className="token-prop">question</span>
-                <span>{": "}</span>
-                <span className="token-string">
-                  &quot;What does clause 4.2 mean?&quot;
-                </span>
-                <br />
-                <span>{"}"}</span>
-                <span>)</span>
-                <br />
-                <br />
-                <span className="token-comment">
-                  {
-                    '// → "Clause 4.2 limits liability to the contract value..."'
-                  }
-                </span>
+              <div>
+                <div className="section-label">AI everywhere</div>
+                <h2
+                  style={{
+                    fontSize: "clamp(28px, 4vw, 36px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.025em",
+                    color: "white",
+                    margin: "0 0 16px",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Build with AI
+                  <br />
+                  on every step
+                </h2>
+                <p style={{ color: "#6b7280", lineHeight: 1.7, marginBottom: 32 }}>
+                  From detecting what needs to be filled, to suggesting values,
+                  to explaining clauses — GPT-4o is embedded throughout the
+                  workflow.
+                </p>
+                <div className="code-block" style={{ fontSize: 12 }}>
+                  <span className="token-comment">{"// AI Chat API"}</span>
+                  <br />
+                  <span className="token-keyword">const </span>
+                  <span className="token-var">reply</span>
+                  <span> = </span>
+                  <span className="token-keyword">await </span>
+                  <span className="token-var">cf</span>
+                  <span>.</span>
+                  <span className="token-fn">ai</span>
+                  <span>.</span>
+                  <span className="token-fn">ask</span>
+                  <span>{"({"}</span>
+                  <br />
+                  {"  "}
+                  <span className="token-prop">contractId</span>
+                  <span>{": "}</span>
+                  <span className="token-string">&quot;ctr_abc123&quot;</span>
+                  <span>{","}</span>
+                  <br />
+                  {"  "}
+                  <span className="token-prop">question</span>
+                  <span>{": "}</span>
+                  <span className="token-string">
+                    &quot;What does clause 4.2 mean?&quot;
+                  </span>
+                  <br />
+                  <span>{"}"}</span>
+                  <span>)</span>
+                  <br />
+                  <br />
+                  <span className="token-comment">
+                    {
+                      '// → "Clause 4.2 limits liability to the contract value..."'
+                    }
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </ScrollReveal>
 
         <hr className="divider" />
 
         {/* ─── TESTIMONIALS ─── */}
-        <section
-          style={{
-            maxWidth: "1100px",
-            margin: "0 auto",
-            padding: "96px 24px",
-          }}
-        >
-          <div style={{ textAlign: "center", marginBottom: 56 }}>
-            <div className="section-label" style={{ display: "inline-flex" }}>
-              Social proof
-            </div>
-            <h2
-              style={{
-                fontSize: 36,
-                fontWeight: 700,
-                letterSpacing: "-0.025em",
-                color: "white",
-              }}
-            >
-              Reach humans, not
-              <br />
-              <span
+        <ScrollReveal>
+          <section className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+            <div className="text-center mb-12 sm:mb-14">
+              <div className="section-label" style={{ display: "inline-flex" }}>
+                Social proof
+              </div>
+              <h2
                 style={{
-                  background: "linear-gradient(135deg, #818cf8, #c084fc)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
+                  fontSize: "clamp(28px, 4vw, 36px)",
+                  fontWeight: 700,
+                  letterSpacing: "-0.025em",
+                  color: "white",
                 }}
               >
-                spam folders
-              </span>
-            </h2>
-          </div>
+                Loved by freelancers
+                <br />
+                <span
+                  style={{
+                    background: "linear-gradient(135deg, #818cf8, #c084fc)",
+                    WebkitBackgroundClip: "text",
+                    WebkitTextFillColor: "transparent",
+                  }}
+                >
+                  and growing teams
+                </span>
+              </h2>
+            </div>
 
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 20,
-            }}
-          >
-            {[
-              {
-                quote:
-                  "We used to spend 2 hours per client contract. Now it's 8 minutes. Contract Faster is genuinely magical.",
-                name: "Linh Nguyen",
-                role: "CEO, Swift Build",
-                avatar: "LN",
-              },
-              {
-                quote:
-                  "The AI placeholder detection saved us from manually mapping 40+ template fields. It just works.",
-                name: "James Park",
-                role: "CTO, Nova Tech",
-                avatar: "JP",
-              },
-              {
-                quote:
-                  "Our legal team approved the AI-generated clause explanations. That alone is worth the subscription.",
-                name: "Sarah Chen",
-                role: "Head of Ops, Peak Agency",
-                avatar: "SC",
-              },
-            ].map((t) => (
-              <div key={t.name} className="testimonial-card">
-                <div
-                  style={{
-                    color: "#a5b4fc",
-                    fontSize: 20,
-                    marginBottom: 16,
-                    fontFamily: "serif",
-                  }}
-                >
-                  "
-                </div>
-                <p
-                  style={{
-                    color: "#d1d5db",
-                    fontSize: 14,
-                    lineHeight: 1.7,
-                    marginBottom: 20,
-                  }}
-                >
-                  {t.quote}
-                </p>
-                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                  <div
-                    style={{
-                      width: 36,
-                      height: 36,
-                      background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
-                      borderRadius: "50%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: 11,
-                      fontWeight: 700,
-                      color: "white",
-                    }}
-                  >
-                    {t.avatar}
-                  </div>
-                  <div>
-                    <p style={{ color: "white", fontSize: 13, fontWeight: 500 }}>
-                      {t.name}
+            {/* 1 col mobile → 3 col desktop */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+              {[
+                {
+                  quote: "We used to spend 2 hours per client contract. Now it's 8 minutes. Contract Faster is genuinely magical.",
+                  name: "Linh Nguyen",
+                  role: "CEO, Swift Build",
+                  avatar: "LN",
+                },
+                {
+                  quote: "The AI placeholder detection saved us from manually mapping 40+ template fields. It just works.",
+                  name: "James Park",
+                  role: "CTO, Nova Tech",
+                  avatar: "JP",
+                },
+                {
+                  quote: "Our legal team approved the AI-generated clause explanations. That alone is worth the subscription.",
+                  name: "Sarah Chen",
+                  role: "Head of Ops, Peak Agency",
+                  avatar: "SC",
+                },
+              ].map((t, idx) => (
+                <ScrollReveal key={t.name} delay={idx * 100}>
+                  <div className="testimonial-card h-full">
+                    <div
+                      style={{
+                        color: "#a5b4fc",
+                        fontSize: 20,
+                        marginBottom: 16,
+                        fontFamily: "serif",
+                      }}
+                    >
+                      &ldquo;
+                    </div>
+                    <p style={{ color: "#d1d5db", fontSize: 14, lineHeight: 1.7, marginBottom: 20 }}>
+                      {t.quote}
                     </p>
-                    <p style={{ color: "#4b5563", fontSize: 12 }}>{t.role}</p>
+                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                      <div
+                        style={{
+                          width: 36,
+                          height: 36,
+                          background: "linear-gradient(135deg, #4f46e5, #7c3aed)",
+                          borderRadius: "50%",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          fontSize: 11,
+                          fontWeight: 700,
+                          color: "white",
+                          flexShrink: 0,
+                        }}
+                      >
+                        {t.avatar}
+                      </div>
+                      <div>
+                        <p style={{ color: "white", fontSize: 13, fontWeight: 500 }}>{t.name}</p>
+                        <p style={{ color: "#4b5563", fontSize: 12 }}>{t.role}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
+                </ScrollReveal>
+              ))}
+            </div>
+          </section>
+        </ScrollReveal>
 
         <hr className="divider" />
 
         {/* ─── EVERYTHING IN YOUR CONTROL ─── */}
-        <section
-          style={{
-            maxWidth: "1100px",
-            margin: "0 auto",
-            padding: "96px 24px",
-          }}
-        >
-          <div
-            style={{
-              display: "grid",
-              gridTemplateColumns: "1fr 1fr",
-              gap: 80,
-            }}
-          >
-            <div>
-              <div className="section-label">Full control</div>
-              <h2
-                style={{
-                  fontSize: 36,
-                  fontWeight: 700,
-                  letterSpacing: "-0.025em",
-                  color: "white",
-                  margin: "0 0 16px",
-                  lineHeight: 1.2,
-                }}
-              >
-                Everything in
-                <br />
-                your control
-              </h2>
-              <p style={{ color: "#6b7280", lineHeight: 1.7 }}>
-                Contract Faster is transforming contract workflows for
-                developers, freelancers, and teams. Here is what else we can
-                do for you.
-              </p>
-            </div>
+        <ScrollReveal>
+          <section className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-24">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 md:gap-20">
+              <div>
+                <div className="section-label">Full control</div>
+                <h2
+                  style={{
+                    fontSize: "clamp(28px, 4vw, 36px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.025em",
+                    color: "white",
+                    margin: "0 0 16px",
+                    lineHeight: 1.2,
+                  }}
+                >
+                  Everything in
+                  <br />
+                  your control
+                </h2>
+                <p style={{ color: "#6b7280", lineHeight: 1.7 }}>
+                  Contract Faster is transforming contract workflows for
+                  developers, freelancers, and teams. Here is what else we can
+                  do for you.
+                </p>
+              </div>
 
-            <div>
-              {[
-                {
-                  icon: "🔒",
-                  title: "Access control",
-                  desc: "Role-based permissions for every template and contract.",
-                },
-                {
-                  icon: "📊",
-                  title: "Usage analytics",
-                  desc: "Track contract creation volume, AI usage, and team activity.",
-                },
-                {
-                  icon: "🌐",
-                  title: "Multi-language",
-                  desc: "Templates in Vietnamese, English, and more. AI works in all.",
-                },
-                {
-                  icon: "🔄",
-                  title: "Version history",
-                  desc: "Every contract version saved. Roll back or compare anytime.",
-                },
-                {
-                  icon: "⚙️",
-                  title: "Webhooks",
-                  desc: "Connect to Slack, Notion, or any tool via webhooks.",
-                },
-              ].map((item) => (
-                <div key={item.title} className="check-item">
-                  <span style={{ fontSize: 18, marginTop: 2 }}>{item.icon}</span>
-                  <div>
-                    <p
-                      style={{
-                        color: "white",
-                        fontWeight: 500,
-                        fontSize: 14,
-                        marginBottom: 3,
-                      }}
-                    >
-                      {item.title}
-                    </p>
-                    <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.5 }}>
-                      {item.desc}
-                    </p>
-                  </div>
-                </div>
-              ))}
+              <div>
+                {[
+                  { icon: "🔒", title: "Access control", desc: "Role-based permissions for every template and contract." },
+                  { icon: "📊", title: "Usage analytics", desc: "Track contract creation volume, AI usage, and team activity." },
+                  { icon: "🌐", title: "Multi-language", desc: "Templates in Vietnamese, English, and more. AI works in all." },
+                  { icon: "🔄", title: "Version history", desc: "Every contract version saved. Roll back or compare anytime." },
+                  { icon: "⚙️", title: "Webhooks", desc: "Connect to Slack, Notion, or any tool via webhooks." },
+                ].map((item, idx) => (
+                  <ScrollReveal key={item.title} delay={idx * 80}>
+                    <div className="check-item">
+                      <span style={{ fontSize: 18, marginTop: 2 }}>{item.icon}</span>
+                      <div>
+                        <p style={{ color: "white", fontWeight: 500, fontSize: 14, marginBottom: 3 }}>
+                          {item.title}
+                        </p>
+                        <p style={{ color: "#6b7280", fontSize: 13, lineHeight: 1.5 }}>
+                          {item.desc}
+                        </p>
+                      </div>
+                    </div>
+                  </ScrollReveal>
+                ))}
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </ScrollReveal>
 
         {/* ─── CTA SECTION ─── */}
-        <section
-          style={{
-            maxWidth: "1100px",
-            margin: "0 auto",
-            padding: "0 24px 96px",
-          }}
-        >
-          <div
-            style={{
-              background:
-                "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1))",
-              border: "1px solid rgba(99,102,241,0.2)",
-              borderRadius: 20,
-              padding: "72px 48px",
-              textAlign: "center",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            {/* Glow */}
+        <ScrollReveal>
+          <section className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8 pb-16 sm:pb-24">
             <div
               style={{
-                position: "absolute",
-                top: "50%",
-                left: "50%",
-                transform: "translate(-50%, -50%)",
-                width: 400,
-                height: 200,
-                background:
-                  "radial-gradient(ellipse, rgba(99,102,241,0.2), transparent 70%)",
-                pointerEvents: "none",
+                background: "linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.1))",
+                border: "1px solid rgba(99,102,241,0.2)",
+                borderRadius: 20,
+                padding: "clamp(40px, 8vw, 72px) clamp(24px, 5vw, 48px)",
+                textAlign: "center",
+                position: "relative",
+                overflow: "hidden",
               }}
-            />
-            <div style={{ position: "relative" }}>
-              <h2
+            >
+              {/* Glow */}
+              <div
                 style={{
-                  fontSize: 40,
-                  fontWeight: 700,
-                  letterSpacing: "-0.025em",
-                  color: "white",
-                  margin: "0 0 16px",
+                  position: "absolute",
+                  top: "50%",
+                  left: "50%",
+                  transform: "translate(-50%, -50%)",
+                  width: 400,
+                  height: 200,
+                  background: "radial-gradient(ellipse, rgba(99,102,241,0.2), transparent 70%)",
+                  pointerEvents: "none",
                 }}
-              >
-                Start closing contracts faster
-              </h2>
-              <p
-                style={{
-                  color: "#9ca3af",
-                  fontSize: 16,
-                  marginBottom: 36,
-                  maxWidth: 440,
-                  margin: "0 auto 36px",
-                  lineHeight: 1.6,
-                }}
-              >
-                Free for your first 3 contracts. No credit card. Cancel
-                anytime.
-              </p>
-              <Link
-                href="/auth/login"
-                className="btn-primary"
-                style={{ padding: "14px 32px", fontSize: 16 }}
-              >
-                Get started for free →
-              </Link>
+              />
+              <div style={{ position: "relative" }}>
+                <h2
+                  style={{
+                    fontSize: "clamp(28px, 5vw, 40px)",
+                    fontWeight: 700,
+                    letterSpacing: "-0.025em",
+                    color: "white",
+                    margin: "0 0 16px",
+                  }}
+                >
+                  Start closing contracts faster
+                </h2>
+                <p
+                  style={{
+                    color: "#9ca3af",
+                    fontSize: 16,
+                    marginBottom: 36,
+                    maxWidth: 440,
+                    margin: "0 auto 36px",
+                    lineHeight: 1.6,
+                  }}
+                >
+                  Free for your first 3 contracts. No credit card. Cancel
+                  anytime.
+                </p>
+                <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
+                  <Link
+                    href="/auth/login"
+                    className="btn-primary w-full sm:w-auto justify-center"
+                    style={{ padding: "14px 32px", fontSize: 16 }}
+                  >
+                    Get started for free →
+                  </Link>
+                  <Link
+                    href="/pricing"
+                    className="btn-ghost w-full sm:w-auto justify-center"
+                    style={{ padding: "14px 24px", fontSize: 15, border: "1px solid rgba(255,255,255,0.1)" }}
+                  >
+                    View pricing
+                  </Link>
+                </div>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </ScrollReveal>
 
         {/* ─── FOOTER ─── */}
         <footer
           style={{
             borderTop: "1px solid rgba(255,255,255,0.06)",
-            padding: "48px 24px",
+            padding: "40px 0",
           }}
         >
-          <div
-            style={{
-              maxWidth: "1100px",
-              margin: "0 auto",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "space-between",
-            }}
-          >
-            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-              <div
-                style={{
-                  width: 22,
-                  height: 22,
-                  background: "linear-gradient(135deg, #6366f1, #a855f7)",
-                  borderRadius: 5,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  fontSize: 11,
-                }}
-              >
-                ⚡
-              </div>
-              <span style={{ color: "#4b5563", fontSize: 13, fontWeight: 500 }}>
-                Contract Faster
-              </span>
-            </div>
-            <div style={{ display: "flex", gap: 24 }}>
-              {["Privacy", "Terms", "Docs", "Status", "GitHub"].map((link) => (
-                <a
-                  key={link}
-                  href="#"
+          <div className="max-w-[1100px] mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Desktop: flex row. Mobile: stacked */}
+            <div className="flex flex-col sm:flex-row items-center sm:items-center justify-between gap-6">
+              {/* Logo */}
+              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <div
                   style={{
-                    color: "#374151",
-                    fontSize: 13,
-                    textDecoration: "none",
-                    transition: "color 0.15s",
+                    width: 22,
+                    height: 22,
+                    background: "linear-gradient(135deg, #6366f1, #a855f7)",
+                    borderRadius: 5,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: 11,
                   }}
                 >
-                  {link}
-                </a>
-              ))}
+                  ⚡
+                </div>
+                <span style={{ color: "#4b5563", fontSize: 13, fontWeight: 500 }}>
+                  Contract Faster
+                </span>
+              </div>
+
+              {/* Links grid — wraps on mobile */}
+              <div className="flex flex-wrap justify-center gap-x-6 gap-y-2">
+                {[
+                  { label: "Privacy", href: "#" },
+                  { label: "Terms", href: "#" },
+                  { label: "Docs", href: "#" },
+                  { label: "Pricing", href: "/pricing" },
+                  { label: "Status", href: "#" },
+                  { label: "GitHub", href: "#" },
+                ].map((link) => (
+                  <a
+                    key={link.label}
+                    href={link.href}
+                    style={{
+                      color: "#374151",
+                      fontSize: 13,
+                      textDecoration: "none",
+                      transition: "color 0.15s",
+                    }}
+                  >
+                    {link.label}
+                  </a>
+                ))}
+              </div>
+
+              <span style={{ color: "#374151", fontSize: 12, whiteSpace: "nowrap" }}>
+                © 2026 Contract Faster
+              </span>
             </div>
-            <span style={{ color: "#374151", fontSize: 12 }}>
-              © 2026 Contract Faster
-            </span>
           </div>
         </footer>
       </div>
