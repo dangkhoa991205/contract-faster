@@ -1,8 +1,12 @@
 import { defineConfig } from "prisma/config";
 
+if (!process.env.DATABASE_URL) {
+  throw new Error("DATABASE_URL environment variable is not set");
+}
+
 export default defineConfig({
   schema: "prisma/schema.prisma",
   datasource: {
-    url: process.env.DATABASE_URL ?? "postgresql://user:password@localhost:5432/saas_docbuilder",
+    url: process.env.DATABASE_URL,
   },
 });
