@@ -7,9 +7,17 @@ export default async function DashboardPage() {
   const session = await requireAuth();
   const userId = session.user.id;
 
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
   const [user, contractCount, recentContracts] = await Promise.all([
     db.user.findUniqueOrThrow({ where: { id: userId } }),
-    db.contract.count({ where: { userId } }),
+    db.contract.count({
+      where: {
+        userId,
+        createdAt: { gte: startOfMonth },
+      },
+    }),
     db.contract.findMany({
       where: { userId },
       orderBy: { createdAt: "desc" },
