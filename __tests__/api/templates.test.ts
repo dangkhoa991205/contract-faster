@@ -19,7 +19,7 @@ const mockFindMany = db.template.findMany as jest.Mock;
 describe("GET /api/templates", () => {
   it("returns 401 when not authenticated", async () => {
     mockAuth.mockResolvedValueOnce(null);
-    const res = await GET(new Request("http://localhost/api/templates"));
+    const res = await GET();
     expect(res.status).toBe(401);
   });
 
@@ -28,7 +28,7 @@ describe("GET /api/templates", () => {
     mockFindMany.mockResolvedValueOnce([
       { id: "t1", name: "Template 1", category: "Dịch vụ", isPublic: true },
     ]);
-    const res = await GET(new Request("http://localhost/api/templates"));
+    const res = await GET();
     const data = await res.json();
     expect(res.status).toBe(200);
     expect(data).toHaveLength(1);
