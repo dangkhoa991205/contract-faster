@@ -5,6 +5,7 @@ export default auth((req) => {
   const isLoggedIn = !!req.auth;
   const isAppRoute = req.nextUrl.pathname.startsWith("/app");
   const isAuthRoute = req.nextUrl.pathname.startsWith("/auth");
+  const isApiRoute = req.nextUrl.pathname.startsWith("/api");
 
   if (isAppRoute && !isLoggedIn) {
     return NextResponse.redirect(new URL("/auth/login", req.nextUrl));
