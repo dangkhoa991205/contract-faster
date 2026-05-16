@@ -67,6 +67,7 @@ export default function AppPage() {
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [previewFillValues, setPreviewFillValues] = useState<Record<string, string>>({});
   const [exporting, setExporting] = useState(false);
+  const [missingFields, setMissingFields] = useState<string[]>([]);
 
   // Scroll chat to bottom when messages change
   useEffect(() => {
@@ -183,13 +184,15 @@ export default function AppPage() {
       .map(p => p.label);
     if (missing.length > 0) { setFillErrors(missing); return; }
     setFillErrors([]);
+    setMissingFields([]);
     setFillLoading(true);
     try {
       const res = await fetch("/api/contracts/generate", {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ templateId: fillTemplate.id, fieldValues: fillValues }),
       });
-      const { html } = await res.json();
+      const { html, missingRequired = [] } = await res.json();
+      setMissingFields(missingRequired);
       setPreviewHtml(html);
       setPreviewTemplate(fillTemplate);
       setPreviewFillValues({ ...fillValues });
@@ -1141,6 +1144,20 @@ export default function AppPage() {
               </button>
             </div>
           </div>
+          {missingFields.length > 0 && (
+            <div style={{
+              background: "#fff8e1",
+              border: "1px solid #ffc107",
+              borderRadius: "8px",
+              padding: "10px 14px",
+              marginBottom: "12px",
+              fontSize: "13px",
+              color: "#7a5a00",
+            }}>
+              <strong>⚠️ Thiếu thông tin:</strong>{" "}
+              {missingFields.join(", ")}
+            </div>
+          )}
           <div className="doc-paper" dangerouslySetInnerHTML={{ __html: previewHtml }} />
         </div>
       )}
