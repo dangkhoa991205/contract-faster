@@ -90,11 +90,13 @@ export async function POST(req: Request) {
   const buffer = await readDocxBuffer(template.fileUrl);
 
   try {
+    console.log("[generate:step1] extractRawText, buffer type:", typeof buffer, Buffer.isBuffer(buffer));
     const { value: rawText } = await mammoth.extractRawText({ buffer });
+    console.log("[generate:step2] rawText length:", rawText.length);
     const hasTokens = /\{\{[^}]+\}\}/.test(rawText);
+    console.log("[generate:step3] hasTokens:", hasTokens, "fieldValues type:", typeof fieldValues);
 
     if (hasTokens) {
-      // {{TOKEN}} style — docxtemplater fills DOCX, then mammoth converts → structure fully preserved
       const tokenRegex = /\{\{([^}#/^@><!]+)\}\}/g;
       const docxTokens = new Set<string>();
       let tok: RegExpExecArray | null;
@@ -102,10 +104,11 @@ export async function POST(req: Request) {
         const t = tok[1].trim();
         if (t && !t.startsWith("#") && !t.startsWith("/")) docxTokens.add(t);
       }
+      console.log("[generate:step4] tokens:", [...docxTokens]);
 
       // Coerce all incoming values to strings — AI may return numbers/null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const incoming = fieldValues as Record<string, any>;
+      const incoming = (fieldValues && typeof fieldValues === "object" ? fieldValues : {}) as Record<string, any>;
       const safeValues: Record<string, string> = {};
       for (const token of docxTokens) {
         const tokenLower = token.toLowerCase();
@@ -118,6 +121,7 @@ export async function POST(req: Request) {
       for (const [k, v] of Object.entries(incoming)) {
         if (!(k in safeValues)) safeValues[k] = v == null ? "" : String(v);
       }
+      console.log("[generate:step5] safeValues keys:", Object.keys(safeValues));
 
       let filledBuffer: Buffer | null = null;
       try {
