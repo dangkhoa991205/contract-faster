@@ -52,7 +52,7 @@ async function renderTokenStyle(
 
   // Detect which required fields are missing
   const missingRequired = templateFields
-    .filter(f => f.required && !safeValues[f.name]?.trim())
+    .filter(f => f.required && !String(safeValues[f.name] ?? "").trim())
     .map(f => f.label);
 
   // Render with docxtemplater
