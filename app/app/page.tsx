@@ -7,7 +7,8 @@ type Template = {
   id: string; name: string; category: string; description?: string;
   placeholders: Field[]; fileUrl: string; createdAt: string;
 };
-type View = "home" | "upload" | "setup" | "fill" | "preview";
+type View = "home" | "upload" | "setup" | "chat" | "fill" | "preview";
+type ChatMsg = { role: "user" | "ai"; text: string; form?: { templateId: string; templateName: string; fields: Field[]; prefilled: Record<string, string> } };
 
 const CATEGORIES = [
   "Hợp đồng dịch vụ", "Hợp đồng lao động", "Hợp đồng mua bán",
@@ -40,6 +41,12 @@ export default function AppPage() {
   const [fillValues, setFillValues] = useState<Record<string, string>>({});
   const [fillErrors, setFillErrors] = useState<string[]>([]);
   const [fillLoading, setFillLoading] = useState(false);
+
+  // Chat state
+  const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const [inlineFormValues, setInlineFormValues] = useState<Record<string, Record<string, string>>>({});
 
   // Preview state
   const [previewHtml, setPreviewHtml] = useState("");
@@ -219,6 +226,76 @@ export default function AppPage() {
     setTemplates(prev => prev.filter(t => t.id !== id));
   }
 
+  /* ── Chat send ── */
+  async function handleChatSend(text?: string) {
+    const msg = (text ?? chatInput).trim();
+    if (!msg || chatLoading) return;
+    setChatInput("");
+    const userMsg: ChatMsg = { role: "user", text: msg };
+    const newHistory = [...chatMsgs, userMsg];
+    setChatMsgs(newHistory);
+    setChatLoading(true);
+    try {
+      const res = await fetch("/api/ai/smart-create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          command: msg,
+          history: newHistory.map(m => ({ role: m.role === "user" ? "user" : "assistant", text: m.text })),
+        }),
+      });
+      const data = await res.json();
+
+      if (data.type === "direct") {
+        // AI auto-filled — generate preview directly
+        setChatMsgs(prev => [...prev, { role: "ai", text: data.message ?? "Đang tạo hợp đồng..." }]);
+        const genRes = await fetch("/api/contracts/generate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ templateId: data.templateId, fieldValues: data.fieldValues ?? {} }),
+        });
+        const { html } = await genRes.json();
+        const tpl = templates.find(t => t.id === data.templateId) ?? { id: data.templateId, name: data.templateName, category: "", description: "", placeholders: [], fileUrl: "", createdAt: "" };
+        setPreviewHtml(html);
+        setPreviewTemplate(tpl);
+        setPreviewFillValues(data.fieldValues ?? {});
+        setView("preview");
+      } else if (data.type === "form") {
+        setChatMsgs(prev => [...prev, { role: "ai", text: data.message ?? "Vui lòng điền thêm thông tin:", form: { templateId: data.templateId, templateName: data.templateName, fields: data.fields ?? [], prefilled: data.prefilled ?? {} } }]);
+        // Pre-fill inline form values
+        setInlineFormValues(prev => ({ ...prev, [data.templateId]: data.prefilled ?? {} }));
+      } else {
+        setChatMsgs(prev => [...prev, { role: "ai", text: data.message ?? "Bạn cần tôi giúp gì?" }]);
+      }
+    } catch {
+      setChatMsgs(prev => [...prev, { role: "ai", text: "Xin lỗi, có lỗi xảy ra. Vui lòng thử lại." }]);
+    }
+    setChatLoading(false);
+  }
+
+  /* ── Submit inline chat form ── */
+  async function handleInlineFormSubmit(templateId: string, templateName: string) {
+    const values = inlineFormValues[templateId] ?? {};
+    setChatMsgs(prev => [...prev, { role: "user", text: `[Đã điền form cho ${templateName}]` }]);
+    setChatLoading(true);
+    try {
+      const genRes = await fetch("/api/contracts/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ templateId, fieldValues: values }),
+      });
+      const { html } = await genRes.json();
+      const tpl = templates.find(t => t.id === templateId) ?? { id: templateId, name: templateName, category: "", description: "", placeholders: [], fileUrl: "", createdAt: "" };
+      setPreviewHtml(html);
+      setPreviewTemplate(tpl);
+      setPreviewFillValues(values);
+      setView("preview");
+    } catch {
+      setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi tạo hợp đồng. Thử lại nhé!" }]);
+    }
+    setChatLoading(false);
+  }
+
   function goUpload() {
     setUploadFiles([]); setUploadName(""); setUploadCategory(CATEGORIES[0]); setUploadError(""); setBulkResults([]);
     setView("upload");
@@ -324,6 +401,23 @@ export default function AppPage() {
         .drop-zone{border:2px dashed var(--border2);border-radius:var(--r-md);padding:48px 24px;text-align:center;transition:all .2s;cursor:pointer;background:var(--bg);}
         .drop-zone:hover,.drop-zone.has-file{border-color:var(--blue);background:var(--bsoft);}
 
+        /* Chat */
+        .chat-wrap{max-width:800px;margin:0 auto;padding:24px 24px 0;display:flex;flex-direction:column;height:calc(100vh - 62px);}
+        .chat-msgs{flex:1;overflow-y:auto;padding-bottom:24px;display:flex;flex-direction:column;gap:16px;}
+        .chat-bubble{max-width:80%;padding:14px 18px;border-radius:18px;font-size:14px;line-height:1.6;white-space:pre-wrap;}
+        .chat-bubble.user{background:var(--grad);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
+        .chat-bubble.ai{background:var(--white);border:1px solid var(--border);color:var(--ink);align-self:flex-start;border-bottom-left-radius:4px;box-shadow:var(--sh-sm);}
+        .chat-input-row{display:flex;gap:10px;padding:16px 0 24px;border-top:1px solid var(--border);background:var(--bg);position:sticky;bottom:0;}
+        .chat-input{flex:1;padding:12px 16px;border:1.5px solid var(--border2);border-radius:24px;font-size:14px;font-family:var(--sans);outline:none;resize:none;background:var(--white);max-height:120px;}
+        .chat-input:focus{border-color:var(--blue);}
+        .chat-send{width:44px;height:44px;border-radius:50%;background:var(--grad);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:opacity .15s;}
+        .chat-send:hover{opacity:.85;}
+        .chat-send:disabled{opacity:.4;cursor:not-allowed;}
+        .chat-empty{text-align:center;padding:60px 24px 24px;}
+        .chat-suggestion{display:inline-block;padding:8px 16px;background:var(--white);border:1.5px solid var(--bborder);border-radius:20px;font-size:13px;color:var(--blue);cursor:pointer;transition:all .15s;margin:4px;}
+        .chat-suggestion:hover{background:var(--bsoft);}
+        .inline-form{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:18px;margin-top:12px;}
+
         /* Page header */
         .page-header{margin-bottom:28px;}
         .page-title{font-family:var(--display);font-size:24px;font-weight:800;color:var(--ink);}
@@ -341,6 +435,7 @@ export default function AppPage() {
         .badge-opt{background:#f0fdf4;color:var(--green);}
 
         @keyframes spin{to{transform:rotate(360deg);}}
+        @keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
         @media(max-width:600px){
           .page,.page-sm{padding:24px 16px;}
           .doc-paper{padding:28px 20px;}
@@ -352,10 +447,11 @@ export default function AppPage() {
       <nav className="nav">
         <div className="nav-inner">
           <div className="nav-logo" onClick={() => setView("home")}>⚡ Contract Faster</div>
-          <button className={`nav-btn ${view === "home" ? "active" : ""}`} onClick={() => setView("home")}>🏠 Dashboard</button>
+          <button className={`nav-btn ${view === "home" ? "active" : ""}`} onClick={() => setView("home")}>🏠 Templates</button>
+          <button className={`nav-btn ${view === "chat" ? "active" : ""}`} onClick={() => { setChatMsgs([]); setView("chat"); }}>💬 Tạo hợp đồng</button>
           <button className={`nav-btn ${view === "upload" ? "active" : ""}`} onClick={goUpload}>📤 Upload</button>
           <div className="nav-right">
-            <button className="btn-pri" onClick={goUpload}>+ Upload Template</button>
+            <button className="btn-pri" onClick={() => { setChatMsgs([]); setView("chat"); }}>💬 Tạo hợp đồng mới</button>
           </div>
         </div>
       </nav>
@@ -405,9 +501,11 @@ export default function AppPage() {
                     <span>🔴 {(t.placeholders ?? []).filter(p => p.required).length} bắt buộc</span>
                   </div>
                   <div className="tpl-actions">
-                    <button className="btn-pri" style={{ flex:1, justifyContent:"center" }} onClick={() => startFill(t)}>
-                      ✍️ Tạo hợp đồng
+                    <button className="btn-pri" style={{ flex:1, justifyContent:"center" }}
+                      onClick={() => { setChatMsgs([{ role:"ai", text:`Bạn muốn tạo hợp đồng "${t.name}" phải không? Hãy cho tôi biết thêm thông tin cần điền nhé!` }]); setView("chat"); }}>
+                      💬 Tạo bằng AI
                     </button>
+                    <button className="btn-sec" style={{ padding:"9px 12px", fontSize:12 }} title="Điền thủ công" onClick={() => startFill(t)}>✍️</button>
                     <button className="btn-icon" title="Chỉnh sửa fields" onClick={() => openSetup(t)}>⚙️</button>
                     <button className="btn-icon danger" title="Xoá template" onClick={() => handleDelete(t.id)}>🗑️</button>
                   </div>
@@ -415,6 +513,104 @@ export default function AppPage() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ── CHAT ── */}
+      {view === "chat" && (
+        <div className="chat-wrap">
+          <div className="chat-msgs">
+            {chatMsgs.length === 0 && (
+              <div className="chat-empty">
+                <div style={{ fontSize:52, marginBottom:16 }}>💬</div>
+                <div style={{ fontFamily:"var(--display)", fontSize:22, fontWeight:800, color:"var(--ink)", marginBottom:8 }}>Tạo hợp đồng bằng AI</div>
+                <div style={{ fontSize:14, color:"var(--t2)", marginBottom:24, lineHeight:1.6 }}>
+                  Nhắn tin mô tả hợp đồng bạn cần.<br/>
+                  AI sẽ tự chọn template và điền thông tin.
+                </div>
+                {templates.length === 0 ? (
+                  <div style={{ background:"#fff8f0", border:"1px solid #fed7aa", borderRadius:"var(--r-md)", padding:"16px 20px", fontSize:14, color:"#c2410c", maxWidth:420, margin:"0 auto" }}>
+                    ⚠️ Bạn chưa có template nào. <button style={{ color:"var(--blue)", background:"none", border:"none", cursor:"pointer", fontWeight:600, fontSize:14 }} onClick={goUpload}>Upload template DOCX</button> trước nhé.
+                  </div>
+                ) : (
+                  <div style={{ display:"flex", flexWrap:"wrap", justifyContent:"center", gap:0 }}>
+                    {[
+                      "Tạo hợp đồng KOL cho TikTok",
+                      "Làm hợp đồng thuê nhân viên marketing",
+                      "Tạo hợp đồng dịch vụ với khách hàng",
+                      "Hợp đồng hợp tác kinh doanh",
+                    ].map(s => (
+                      <button key={s} className="chat-suggestion" onClick={() => handleChatSend(s)}>{s}</button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {chatMsgs.map((m, i) => (
+              <div key={i} style={{ display:"flex", flexDirection:"column", alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
+                <div className={`chat-bubble ${m.role === "user" ? "user" : "ai"}`}>
+                  {m.text}
+                </div>
+                {/* Inline form inside AI message */}
+                {m.form && (
+                  <div className="inline-form" style={{ alignSelf:"flex-start", width:"100%", maxWidth:600 }}>
+                    <div style={{ fontWeight:700, fontSize:13, color:"var(--t2)", marginBottom:12 }}>
+                      📋 {m.form.templateName}
+                    </div>
+                    {m.form.fields.map(f => (
+                      <div key={f.name} className="form-group">
+                        <label className="form-label" style={{ fontSize:12 }}>
+                          {f.label}
+                          {f.required && <span className="req"> *</span>}
+                        </label>
+                        <input
+                          type={f.type === "date" ? "date" : f.type === "email" ? "email" : "text"}
+                          className="form-input" style={{ fontSize:13 }}
+                          value={inlineFormValues[m.form!.templateId]?.[f.name] ?? m.form!.prefilled[f.name] ?? ""}
+                          placeholder={`Nhập ${f.label.toLowerCase()}...`}
+                          onChange={e => setInlineFormValues(prev => ({
+                            ...prev,
+                            [m.form!.templateId]: { ...prev[m.form!.templateId], [f.name]: e.target.value }
+                          }))}
+                        />
+                      </div>
+                    ))}
+                    <button className="btn-pri" style={{ marginTop:4 }}
+                      onClick={() => handleInlineFormSubmit(m.form!.templateId, m.form!.templateName)}>
+                      👁️ Xem trước hợp đồng →
+                    </button>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {chatLoading && (
+              <div style={{ alignSelf:"flex-start" }}>
+                <div className="chat-bubble ai" style={{ display:"flex", gap:4, alignItems:"center" }}>
+                  <span style={{ animation:"bounce 1s infinite", display:"inline-block" }}>●</span>
+                  <span style={{ animation:"bounce 1s .2s infinite", display:"inline-block" }}>●</span>
+                  <span style={{ animation:"bounce 1s .4s infinite", display:"inline-block" }}>●</span>
+                </div>
+              </div>
+            )}
+          </div>
+
+          <div className="chat-input-row">
+            <textarea
+              className="chat-input"
+              rows={1}
+              value={chatInput}
+              placeholder="Nhắn tin... VD: Tạo hợp đồng KOL với Nguyễn Văn A, 30 triệu, thời hạn 3 tháng"
+              onChange={e => setChatInput(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
+              }}
+            />
+            <button className="chat-send" disabled={chatLoading || !chatInput.trim()} onClick={() => handleChatSend()}>
+              {chatLoading ? <Loader2 size={18} style={{ animation:"spin 1s linear infinite" }} /> : "↑"}
+            </button>
+          </div>
         </div>
       )}
 
