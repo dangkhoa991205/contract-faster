@@ -57,6 +57,10 @@ export default function AppPage() {
   const chatBottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploadingFile, setUploadingFile] = useState(false);
+  const [pendingFile, setPendingFile] = useState<File | null>(null); // file staged, not yet sent
+  const [isRecording, setIsRecording] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recognitionRef = useRef<any>(null);
 
   // Preview state
   const [previewHtml, setPreviewHtml] = useState("");
@@ -244,19 +248,61 @@ export default function AppPage() {
   /* ── Chat send ── */
   async function handleChatSend(text?: string) {
     const msg = (text ?? chatInput).trim();
-    if (!msg || chatLoading) return;
+    const stagedFile = text ? null : pendingFile; // suggestion chip calls skip file
+    if (!msg && !stagedFile) return;
+    if (chatLoading || chatGenerating) return;
+
     setChatInput("");
-    const userMsg: ChatMsg = { role: "user", text: msg };
-    const newHistory = [...chatMsgs, userMsg];
-    setChatMsgs(newHistory);
+    if (stagedFile) setPendingFile(null);
+
+    // Build history snapshot we can reference after async ops
+    let historySnapshot = chatMsgs;
+    let aiCommand = msg;
+
+    // 1. Upload file first if staged
+    if (stagedFile) {
+      setUploadingFile(true);
+      const userText = msg ? `📎 ${stagedFile.name} — ${msg}` : `📎 ${stagedFile.name}`;
+      const userMsg: ChatMsg = { role: "user", text: userText, attachment: { name: stagedFile.name, type: stagedFile.name.endsWith(".docx") ? "docx" : "image" } };
+      historySnapshot = [...historySnapshot, userMsg];
+      setChatMsgs(historySnapshot);
+
+      const fd = new FormData();
+      fd.append("file", stagedFile);
+      try {
+        const res = await fetch("/api/ai/chat-upload", { method: "POST", body: fd });
+        const data = await res.json();
+        if (res.ok) {
+          const aiMsg: ChatMsg = { role: "ai", text: data.message };
+          historySnapshot = [...historySnapshot, aiMsg];
+          setChatMsgs(historySnapshot);
+          aiCommand = data.content ? `${data.content}${msg ? `\nYêu cầu: ${msg}` : ""}` : msg;
+        } else {
+          setChatMsgs(prev => [...prev, { role: "ai", text: `❌ Không đọc được file: ${data.error}` }]);
+          setUploadingFile(false);
+          return;
+        }
+      } catch {
+        setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi đọc file." }]);
+        setUploadingFile(false);
+        return;
+      }
+      setUploadingFile(false);
+    } else {
+      // No file — just add user text message
+      const userMsg: ChatMsg = { role: "user", text: msg };
+      historySnapshot = [...historySnapshot, userMsg];
+      setChatMsgs(historySnapshot);
+    }
+
     setChatLoading(true);
     try {
       const res = await fetch("/api/ai/smart-create", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          command: msg,
-          history: newHistory.map(m => ({ role: m.role === "user" ? "user" : "assistant", text: m.text })),
+          command: aiCommand || msg,
+          history: historySnapshot.map(m => ({ role: m.role === "user" ? "user" : "assistant", text: m.text })),
         }),
       });
       const data = await res.json();
@@ -320,29 +366,41 @@ export default function AppPage() {
     setChatLoading(false);
   }
 
-  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+  // Stage file (from button or paste) — don't send yet
+  function stageFile(file: File) {
+    setPendingFile(file);
+  }
+
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
-    if (!file) return;
     e.target.value = "";
-    setUploadingFile(true);
-    // Show user message with attachment
-    setChatMsgs(prev => [...prev, { role: "user", text: `📎 ${file.name}`, attachment: { name: file.name, type: file.name.endsWith(".docx") ? "docx" : "image" } }]);
-    const fd = new FormData();
-    fd.append("file", file);
-    try {
-      const res = await fetch("/api/ai/chat-upload", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) {
-        setChatMsgs(prev => [...prev, { role: "ai", text: `❌ Không đọc được file: ${data.error}` }]);
-      } else {
-        setChatMsgs(prev => [...prev, { role: "ai", text: data.message }]);
-        // Now ask AI to process the extracted content
-        await handleChatSend(`[File đính kèm: ${file.name}]\nNội dung: ${data.content}`);
-      }
-    } catch {
-      setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi đọc file. Thử lại nhé!" }]);
+    if (file) stageFile(file);
+  }
+
+  // Start/stop voice recording
+  function toggleVoice() {
+    if (isRecording) {
+      recognitionRef.current?.stop();
+      setIsRecording(false);
+      return;
     }
-    setUploadingFile(false);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!SR) { alert("Trình duyệt không hỗ trợ nhận diện giọng nói. Dùng Chrome nhé!"); return; }
+    const recognition = new SR();
+    recognition.lang = "vi-VN";
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    recognition.onresult = (e: { results: { [k: number]: { [k: number]: { transcript: string } } } }) => {
+      const transcript = e.results[0][0].transcript;
+      setChatInput(prev => (prev ? prev + " " : "") + transcript);
+    };
+    recognition.onend = () => setIsRecording(false);
+    recognition.onerror = () => setIsRecording(false);
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsRecording(true);
   }
 
   function goUpload() {
@@ -700,29 +758,61 @@ export default function AppPage() {
 
           <div className="chat-input-row">
             <input ref={fileInputRef} type="file" accept=".docx,image/*" style={{ display:"none" }}
-              onChange={handleFileUpload} />
-            <button className="chat-attach" disabled={chatLoading || chatGenerating || uploadingFile}
-              onClick={() => fileInputRef.current?.click()} title="Đính kèm file hoặc ảnh">
-              {uploadingFile ? <Loader2 size={16} style={{ animation:"spin 1s linear infinite" }} /> : "📎"}
-            </button>
-            <textarea
-              className="chat-input"
-              rows={1}
-              value={chatInput}
-              placeholder="Nhắn tin... hoặc đính kèm file 📎"
-              onChange={e => {
-                setChatInput(e.target.value);
-                const ta = e.target;
-                ta.style.height = "0";
-                ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
-              }}
-              onKeyDown={e => {
-                if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
-              }}
-            />
-            <button className="chat-send" disabled={chatLoading || chatGenerating || uploadingFile || !chatInput.trim()} onClick={() => handleChatSend()}>
-              {chatLoading ? <Loader2 size={18} style={{ animation:"spin 1s linear infinite" }} /> : "↑"}
-            </button>
+              onChange={handleFileInputChange} />
+            <div style={{ flex:1, display:"flex", flexDirection:"column", gap:6 }}>
+              {pendingFile && (
+                <div style={{ display:"flex", alignItems:"center", gap:8, background:"var(--bsoft)", border:"1px solid var(--bborder)", borderRadius:10, padding:"6px 10px", fontSize:12 }}>
+                  <span>{pendingFile.name.endsWith(".docx") ? "📄" : "🖼️"}</span>
+                  <span style={{ flex:1, color:"var(--blue)", fontWeight:600, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{pendingFile.name}</span>
+                  <button onClick={() => setPendingFile(null)} style={{ background:"none", border:"none", cursor:"pointer", color:"var(--t4)", fontSize:16, lineHeight:1 }}>×</button>
+                </div>
+              )}
+              <div style={{ display:"flex", gap:8, alignItems:"flex-end" }}>
+                <button className="chat-attach" disabled={chatLoading || chatGenerating || uploadingFile}
+                  onClick={() => fileInputRef.current?.click()} title="Đính kèm file hoặc ảnh">
+                  {uploadingFile ? <Loader2 size={16} style={{ animation:"spin 1s linear infinite" }} /> : "📎"}
+                </button>
+                <textarea
+                  className="chat-input"
+                  rows={1}
+                  value={chatInput}
+                  placeholder={pendingFile ? "Thêm mô tả (tuỳ chọn) rồi gửi..." : "Nhắn tin, paste ảnh hoặc kéo file vào đây..."}
+                  onChange={e => {
+                    setChatInput(e.target.value);
+                    const ta = e.target;
+                    ta.style.height = "0";
+                    ta.style.height = Math.min(ta.scrollHeight, 160) + "px";
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
+                  }}
+                  onPaste={e => {
+                    const items = Array.from(e.clipboardData?.items ?? []);
+                    const fileItem = items.find(i => i.kind === "file");
+                    if (fileItem) {
+                      const f = fileItem.getAsFile();
+                      if (f) { e.preventDefault(); stageFile(f); }
+                    }
+                  }}
+                  onDragOver={e => e.preventDefault()}
+                  onDrop={e => {
+                    e.preventDefault();
+                    const f = e.dataTransfer.files?.[0];
+                    if (f) stageFile(f);
+                  }}
+                />
+                <button className="chat-attach"
+                  disabled={chatLoading || chatGenerating}
+                  onClick={toggleVoice}
+                  title={isRecording ? "Dừng ghi âm" : "Nhập bằng giọng nói (vi-VN)"}
+                  style={{ background: isRecording ? "#fef2f2" : undefined, borderColor: isRecording ? "#ef4444" : undefined, color: isRecording ? "#ef4444" : undefined }}>
+                  {isRecording ? "🔴" : "🎤"}
+                </button>
+                <button className="chat-send" disabled={chatLoading || chatGenerating || uploadingFile || (!chatInput.trim() && !pendingFile)} onClick={() => handleChatSend()}>
+                  {chatLoading ? <Loader2 size={18} style={{ animation:"spin 1s linear infinite" }} /> : "↑"}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
