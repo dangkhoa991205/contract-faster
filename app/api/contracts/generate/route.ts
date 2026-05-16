@@ -122,14 +122,14 @@ export async function POST(req: Request) {
           paragraphLoop: true,
           linebreaks: true,
           nullGetter: () => "",
-          delimiters: { start: "{{", end: "}}" },
         });
         doc.render(safeValues);
         const filled = doc.getZip().generate({ type: "nodebuffer" });
         const html = await convertToHtmlWithAlignment(filled);
         if (html) return NextResponse.json({ html });
       } catch (docxErr) {
-        console.error("[generate] docxtemplater error, falling back to raw mammoth:", docxErr);
+        const docxMsg = docxErr instanceof Error ? docxErr.message : JSON.stringify(docxErr);
+        console.error("[generate] docxtemplater error, falling back to raw mammoth:", docxMsg);
       }
       // Fallback: convert original DOCX to HTML without filling (better than empty)
       const html = await convertToHtmlWithAlignment(buffer);
