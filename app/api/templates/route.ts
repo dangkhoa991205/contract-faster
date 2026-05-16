@@ -22,60 +22,24 @@ export async function GET() {
   }
 }
 
-export async function POST(req: Request) {
-  const session = await auth();
-  if (!session?.user) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
-
-  await ensureUser(session);
-
-  const formData = await req.formData();
-  const file = formData.get("file") as File | null;
-  const name = formData.get("name") as string;
-  const category = formData.get("category") as string;
-  const language = (formData.get("language") as string) ?? "vi";
-
-  if (!file || !name || !category) {
-    return NextResponse.json(
-      { error: "Missing required fields: file, name, category" },
-      { status: 400 }
-    );
-  }
-
-  if (!file.name.endsWith(".docx")) {
-    return NextResponse.json(
-      { error: "Only .docx files are supported" },
-      { status: 400 }
-    );
-  }
-
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
-  const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
-
-  let fileUrl: string;
+async function uploadFile(buffer: Buffer, filename: string): Promise<string> {
   if (process.env.BLOB_READ_WRITE_TOKEN) {
-    // Vercel Blob (production)
     const { put } = await import("@vercel/blob");
     const blob = await put(`templates/${filename}`, buffer, { access: "public" });
-    fileUrl = blob.url;
+    return blob.url;
   } else {
-    // Local filesystem (development)
     const { writeFile, mkdir } = await import("fs/promises");
     const { join } = await import("path");
     const uploadDir = join(process.cwd(), "uploads", "templates");
     await mkdir(uploadDir, { recursive: true });
     await writeFile(join(uploadDir, filename), buffer);
-    fileUrl = `/uploads/templates/${filename}`;
+    return `/uploads/templates/${filename}`;
   }
+}
 
-  // Extract actual {{FIELD_NAME}} placeholders directly from DOCX raw text
-  let placeholders: Array<{ name: string; label: string; type: string }> = [];
+async function extractPlaceholders(buffer: Buffer): Promise<Array<{ name: string; label: string; type: string }>> {
   try {
     const { value: rawText } = await mammoth.extractRawText({ buffer });
-
-    // Step 1: find all {{...}} tokens directly — these are the exact names docxtemplater uses
     const tokenSet = new Set<string>();
     const tokenRegex = /\{\{([^}#/^@><!]+)\}\}/g;
     let m: RegExpExecArray | null;
@@ -86,7 +50,6 @@ export async function POST(req: Request) {
     const tokens = Array.from(tokenSet);
 
     if (tokens.length > 0) {
-      // Step 2: ask AI to generate Vietnamese labels for each exact field name
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         temperature: 0,
@@ -104,14 +67,12 @@ Return ONLY the JSON array, no explanation.`,
       const jsonMatch = content.match(/\[[\s\S]*\]/);
       if (jsonMatch) {
         const parsed: Array<{ name: string; label: string; type: string }> = JSON.parse(jsonMatch[0]);
-        // Ensure the name field exactly matches the token from DOCX
-        placeholders = tokens.map(tok => {
+        return tokens.map(tok => {
           const found = parsed.find(p => p.name === tok);
           return found ?? { name: tok, label: tok.replace(/_/g, " "), type: "text" };
         });
       }
     } else {
-      // Fallback: no {{}} tokens found — ask AI to detect fill-in spots
       const completion = await openai.chat.completions.create({
         model: "gpt-4o",
         temperature: 0,
@@ -126,11 +87,107 @@ Return ONLY the JSON array, no explanation.`,
       });
       const content = completion.choices[0].message.content ?? "[]";
       const jsonMatch = content.match(/\[[\s\S]*\]/);
-      if (jsonMatch) placeholders = JSON.parse(jsonMatch[0]);
+      if (jsonMatch) return JSON.parse(jsonMatch[0]);
     }
-  } catch {
-    // Non-fatal: save without placeholders
+  } catch (err) {
+    console.error("[extractPlaceholders] error:", err);
   }
+  return [];
+}
+
+// Single template upload
+export async function POST(req: Request) {
+  const session = await auth();
+  if (!session?.user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  await ensureUser(session);
+
+  let formData: FormData;
+  try {
+    formData = await req.formData();
+  } catch (err) {
+    console.error("[POST /api/templates] formData error:", err);
+    return NextResponse.json({ error: "Invalid form data" }, { status: 400 });
+  }
+
+  // Bulk upload: multiple files
+  const files = formData.getAll("file") as File[];
+  const name = formData.get("name") as string | null;
+  const category = (formData.get("category") as string) || "Khác";
+  const language = (formData.get("language") as string) ?? "vi";
+
+  if (files.length === 0) {
+    return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+  }
+
+  // Bulk mode: multiple files, names auto-derived from filename
+  if (files.length > 1 || !name) {
+    const results: Array<{ success: boolean; name: string; error?: string; template?: object }> = [];
+
+    for (const file of files) {
+      if (!file.name.endsWith(".docx")) {
+        results.push({ success: false, name: file.name, error: "Only .docx files are supported" });
+        continue;
+      }
+
+      try {
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+        const templateName = name || file.name.replace(/\.docx$/i, "").replace(/[-_]/g, " ");
+
+        const [fileUrl, placeholders] = await Promise.all([
+          uploadFile(buffer, filename),
+          extractPlaceholders(buffer),
+        ]);
+
+        const template = await db.template.create({
+          data: {
+            name: templateName,
+            category,
+            language,
+            fileUrl,
+            placeholders,
+            isPublic: false,
+            userId: session.user.id,
+          },
+        });
+
+        results.push({ success: true, name: templateName, template });
+      } catch (err) {
+        console.error(`[POST /api/templates] bulk error for ${file.name}:`, err);
+        results.push({ success: false, name: file.name, error: String(err) });
+      }
+    }
+
+    const allOk = results.every(r => r.success);
+    return NextResponse.json({ bulk: true, results }, { status: allOk ? 201 : 207 });
+  }
+
+  // Single file upload
+  const file = files[0];
+  if (!name || !category) {
+    return NextResponse.json({ error: "Missing required fields: name, category" }, { status: 400 });
+  }
+  if (!file.name.endsWith(".docx")) {
+    return NextResponse.json({ error: "Only .docx files are supported" }, { status: 400 });
+  }
+
+  const bytes = await file.arrayBuffer();
+  const buffer = Buffer.from(bytes);
+  const filename = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+
+  let fileUrl: string;
+  try {
+    fileUrl = await uploadFile(buffer, filename);
+  } catch (err) {
+    console.error("[POST /api/templates] upload error:", err);
+    return NextResponse.json({ error: `File upload failed: ${String(err)}` }, { status: 500 });
+  }
+
+  const placeholders = await extractPlaceholders(buffer);
 
   try {
     const template = await db.template.create({
@@ -145,7 +202,8 @@ Return ONLY the JSON array, no explanation.`,
       },
     });
     return NextResponse.json(template, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: "Database error — template not saved" }, { status: 500 });
+  } catch (err) {
+    console.error("[POST /api/templates] DB error:", err);
+    return NextResponse.json({ error: `Database error: ${String(err)}` }, { status: 500 });
   }
 }

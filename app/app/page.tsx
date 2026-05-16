@@ -20,11 +20,12 @@ export default function AppPage() {
   const [loadingTemplates, setLoadingTemplates] = useState(true);
 
   // Upload state
-  const [uploadFile, setUploadFile] = useState<File | null>(null);
+  const [uploadFiles, setUploadFiles] = useState<File[]>([]);
   const [uploadName, setUploadName] = useState("");
   const [uploadCategory, setUploadCategory] = useState(CATEGORIES[0]);
   const [uploadLoading, setUploadLoading] = useState(false);
   const [uploadError, setUploadError] = useState("");
+  const [bulkResults, setBulkResults] = useState<Array<{ name: string; success: boolean; error?: string }>>([]);
 
   // Setup state
   const [setupTemplate, setSetupTemplate] = useState<Template | null>(null);
@@ -53,34 +54,62 @@ export default function AppPage() {
       .catch(() => setLoadingTemplates(false));
   }, []);
 
-  /* ── Upload template ── */
+  /* ── Upload template (single or bulk) ── */
   async function handleUpload(e: React.FormEvent) {
     e.preventDefault();
-    if (!uploadFile || !uploadName.trim()) {
-      setUploadError("Vui lòng chọn file và nhập tên template.");
+    if (uploadFiles.length === 0) {
+      setUploadError("Vui lòng chọn ít nhất 1 file DOCX.");
       return;
     }
-    setUploadLoading(true); setUploadError("");
+    setUploadLoading(true); setUploadError(""); setBulkResults([]);
+
+    const isBulk = uploadFiles.length > 1;
     const fd = new FormData();
-    fd.append("file", uploadFile);
-    fd.append("name", uploadName.trim());
+    for (const f of uploadFiles) fd.append("file", f);
     fd.append("category", uploadCategory);
+    if (!isBulk && uploadName.trim()) fd.append("name", uploadName.trim());
+
     try {
       const res = await fetch("/api/templates", { method: "POST", body: fd });
-      const data = await res.json();
-      if (!res.ok) { setUploadError(data.error ?? "Lỗi upload."); setUploadLoading(false); return; }
-      const fields: Field[] = (data.placeholders ?? []).map((p: { name: string; label: string; type: string }) => ({
-        ...p, required: true,
-      }));
-      setSetupTemplate(data);
-      setSetupFields(fields);
-      setSetupName(data.name);
-      setSetupCategory(data.category);
-      setSetupDescription(data.description ?? "");
-      setTemplates(prev => [data, ...prev]);
-      setView("setup");
-    } catch {
-      setUploadError("Lỗi kết nối. Vui lòng thử lại.");
+      let data: Record<string, unknown>;
+      try { data = await res.json(); } catch { data = {}; }
+      if (!res.ok) {
+        setUploadError((data.error as string) ?? `Lỗi upload (${res.status}). Vui lòng thử lại.`);
+        setUploadLoading(false); return;
+      }
+
+      if (isBulk || data.bulk) {
+        // Bulk upload result
+        const results = (data.results as Array<{ success: boolean; name: string; error?: string; template?: Template }>) ?? [];
+        setBulkResults(results.map(r => ({ name: r.name, success: r.success, error: r.error })));
+        const newTemplates = results.filter(r => r.success && r.template).map(r => r.template as Template);
+        setTemplates(prev => [...newTemplates, ...prev]);
+        if (results.every(r => r.success)) {
+          // All success — go to setup for the first one
+          const first = results[0];
+          if (first?.template) {
+            const tpl = first.template as Template;
+            setSetupTemplate(tpl);
+            setSetupFields((tpl.placeholders ?? []).map((p: Field) => ({ ...p, required: true })));
+            setSetupName(tpl.name); setSetupCategory(tpl.category); setSetupDescription(tpl.description ?? "");
+            setView("setup");
+          } else { setView("home"); }
+        }
+        // If partial failure, stay on upload view to show results
+      } else {
+        // Single upload
+        const tpl = data as unknown as Template;
+        const fields: Field[] = (tpl.placeholders ?? []).map((p: Field) => ({ ...p, required: true }));
+        setSetupTemplate(tpl);
+        setSetupFields(fields);
+        setSetupName(tpl.name);
+        setSetupCategory(tpl.category);
+        setSetupDescription(tpl.description ?? "");
+        setTemplates(prev => [tpl, ...prev]);
+        setView("setup");
+      }
+    } catch (err) {
+      setUploadError(`Lỗi kết nối: ${String(err)}. Vui lòng thử lại.`);
     }
     setUploadLoading(false);
   }
@@ -191,7 +220,7 @@ export default function AppPage() {
   }
 
   function goUpload() {
-    setUploadFile(null); setUploadName(""); setUploadCategory(CATEGORIES[0]); setUploadError("");
+    setUploadFiles([]); setUploadName(""); setUploadCategory(CATEGORIES[0]); setUploadError(""); setBulkResults([]);
     setView("upload");
   }
 
@@ -399,11 +428,30 @@ export default function AppPage() {
           </div>
           <div className="card">
             <form onSubmit={handleUpload}>
-              <div className="form-group">
-                <label className="form-label">Tên template <span className="req">*</span></label>
-                <input className="form-input" value={uploadName} onChange={e => setUploadName(e.target.value)}
-                  placeholder="VD: Hợp đồng dịch vụ marketing" required />
-              </div>
+              {/* Bulk results */}
+              {bulkResults.length > 0 && (
+                <div style={{ marginBottom:16, border:"1px solid var(--border)", borderRadius:"var(--r-sm)", overflow:"hidden" }}>
+                  {bulkResults.map((r, i) => (
+                    <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderBottom: i < bulkResults.length - 1 ? "1px solid var(--border)" : "none", background: r.success ? "#f0fdf4" : "#fff1f1" }}>
+                      <span style={{ fontSize:16 }}>{r.success ? "✅" : "❌"}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:13, fontWeight:600, color:"var(--ink)" }}>{r.name}</div>
+                        {r.error && <div style={{ fontSize:12, color:"var(--red)", marginTop:2 }}>{r.error}</div>}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {uploadFiles.length <= 1 && (
+                <div className="form-group">
+                  <label className="form-label">Tên template {uploadFiles.length === 1 && <span className="req">*</span>}
+                    {uploadFiles.length > 1 && <span className="hint">(tự động từ tên file khi upload nhiều)</span>}
+                  </label>
+                  <input className="form-input" value={uploadName} onChange={e => setUploadName(e.target.value)}
+                    placeholder="VD: Hợp đồng dịch vụ marketing" />
+                </div>
+              )}
               <div className="form-group">
                 <label className="form-label">Loại hợp đồng <span className="req">*</span></label>
                 <select className="form-select" value={uploadCategory} onChange={e => setUploadCategory(e.target.value)}>
@@ -411,26 +459,43 @@ export default function AppPage() {
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">File DOCX <span className="req">*</span></label>
-                <label className={`drop-zone ${uploadFile ? "has-file" : ""}`} style={{ display:"block" }}>
-                  <input type="file" accept=".docx" style={{ display:"none" }} onChange={e => {
-                    const f = e.target.files?.[0] ?? null;
-                    setUploadFile(f);
-                    if (f && !uploadName) setUploadName(f.name.replace(/\.docx$/i, "").replace(/[_-]/g, " "));
+                <label className="form-label">
+                  File DOCX <span className="req">*</span>
+                  <span className="hint">Chọn nhiều file để upload hàng loạt</span>
+                </label>
+                <label className={`drop-zone ${uploadFiles.length > 0 ? "has-file" : ""}`} style={{ display:"block" }}>
+                  <input type="file" accept=".docx" multiple style={{ display:"none" }} onChange={e => {
+                    const files = Array.from(e.target.files ?? []);
+                    setUploadFiles(files);
+                    if (files.length === 1 && !uploadName)
+                      setUploadName(files[0].name.replace(/\.docx$/i, "").replace(/[_-]/g, " "));
+                    setBulkResults([]);
                   }} />
-                  {uploadFile ? (
+                  {uploadFiles.length > 0 ? (
                     <>
-                      <div style={{ fontSize:36, marginBottom:8 }}>✅</div>
-                      <div style={{ fontWeight:700, color:"var(--ink)", fontSize:15 }}>{uploadFile.name}</div>
-                      <div style={{ fontSize:13, color:"var(--t4)", marginTop:4 }}>{(uploadFile.size / 1024).toFixed(0)} KB • Click để đổi file</div>
+                      <div style={{ fontSize:36, marginBottom:8 }}>{uploadFiles.length > 1 ? "📚" : "✅"}</div>
+                      {uploadFiles.length === 1 ? (
+                        <>
+                          <div style={{ fontWeight:700, color:"var(--ink)", fontSize:15 }}>{uploadFiles[0].name}</div>
+                          <div style={{ fontSize:13, color:"var(--t4)", marginTop:4 }}>{(uploadFiles[0].size / 1024).toFixed(0)} KB • Click để đổi file</div>
+                        </>
+                      ) : (
+                        <>
+                          <div style={{ fontWeight:700, color:"var(--ink)", fontSize:15 }}>{uploadFiles.length} files đã chọn</div>
+                          <div style={{ fontSize:12, color:"var(--t4)", marginTop:6 }}>
+                            {uploadFiles.map(f => f.name).join(" • ")}
+                          </div>
+                          <div style={{ fontSize:12, color:"var(--t4)", marginTop:4 }}>Click để thay đổi</div>
+                        </>
+                      )}
                     </>
                   ) : (
                     <>
                       <div style={{ fontSize:44, marginBottom:12 }}>📄</div>
                       <div style={{ fontWeight:700, fontSize:15, color:"var(--ink)" }}>Kéo thả hoặc click để chọn file</div>
                       <div style={{ fontSize:13, color:"var(--t4)", marginTop:6, lineHeight:1.5 }}>
-                        Hỗ trợ file .DOCX<br/>
-                        Có thể dùng biến <code style={{ background:"#f1f5f9", padding:"1px 5px", borderRadius:4 }}>{`{{ten_bien}}`}</code> hoặc chỗ trống <code style={{ background:"#f1f5f9", padding:"1px 5px", borderRadius:4 }}>…………</code>
+                        Hỗ trợ file .DOCX • Có thể chọn nhiều file cùng lúc<br/>
+                        Dùng biến <code style={{ background:"#f1f5f9", padding:"1px 5px", borderRadius:4 }}>{`{{ten_bien}}`}</code> hoặc chỗ trống <code style={{ background:"#f1f5f9", padding:"1px 5px", borderRadius:4 }}>…………</code>
                       </div>
                     </>
                   )}
@@ -441,8 +506,8 @@ export default function AppPage() {
                 <button type="button" className="btn-sec" onClick={() => setView("home")}>Huỷ</button>
                 <button type="submit" className="btn-pri" disabled={uploadLoading}>
                   {uploadLoading
-                    ? <><Loader2 size={15} style={{ animation:"spin 1s linear infinite" }} /> AI đang phân tích template...</>
-                    : "Phân tích template →"}
+                    ? <><Loader2 size={15} style={{ animation:"spin 1s linear infinite" }} /> AI đang phân tích{uploadFiles.length > 1 ? ` ${uploadFiles.length} templates` : " template"}...</>
+                    : uploadFiles.length > 1 ? `📤 Upload ${uploadFiles.length} templates →` : "Phân tích template →"}
                 </button>
               </div>
             </form>
