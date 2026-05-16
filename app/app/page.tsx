@@ -346,8 +346,10 @@ export default function AppPage() {
   /* ── Submit inline chat form ── */
   async function handleInlineFormSubmit(templateId: string, templateName: string) {
     const values = inlineFormValues[templateId] ?? {};
-    setChatMsgs(prev => [...prev, { role: "user", text: `[Đã điền form cho ${templateName}]` }]);
+    const valuesSummary = Object.entries(values).filter(([,v]) => v).map(([k,v]) => `${k}: ${v}`).join(", ");
+    setChatMsgs(prev => [...prev, { role: "user", text: `Đã điền thông tin: ${valuesSummary || "(trống)"}` }]);
     setChatLoading(true);
+    setChatGenerating(true);
     try {
       const genRes = await fetch("/api/contracts/generate", {
         method: "POST",
@@ -355,15 +357,16 @@ export default function AppPage() {
         body: JSON.stringify({ templateId, fieldValues: values }),
       });
       const { html } = await genRes.json();
-      const tpl = templates.find(t => t.id === templateId) ?? { id: templateId, name: templateName, category: "", description: "", placeholders: [], fileUrl: "", createdAt: "" };
-      setPreviewHtml(html);
-      setPreviewTemplate(tpl);
-      setPreviewFillValues(values);
-      setView("preview");
+      setChatMsgs(prev => [...prev, {
+        role: "ai",
+        text: "✅ Hợp đồng đã sẵn sàng! Xem và xuất file bên dưới.",
+        preview: { html, templateId, templateName, fieldValues: values },
+      }]);
     } catch {
       setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi tạo hợp đồng. Thử lại nhé!" }]);
     }
     setChatLoading(false);
+    setChatGenerating(false);
   }
 
   // Stage file (from button or paste) — don't send yet
