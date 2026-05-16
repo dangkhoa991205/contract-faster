@@ -60,6 +60,7 @@ model Template {
   id           String     @id @default(cuid())
   name         String
   category     String
+  description  String?
   language     String     @default("vi")
   fileUrl      String
   placeholders Json       @default("[]")
