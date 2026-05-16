@@ -302,7 +302,17 @@ export default function AppPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           command: aiCommand || msg,
-          history: historySnapshot.map(m => ({ role: m.role === "user" ? "user" : "assistant", text: m.text })),
+          history: historySnapshot.map(m => {
+            let text = m.text;
+            if (m.form) {
+              text += `\n[Form: ${m.form.templateName} — fields: ${m.form.fields.map(f => f.label).join(", ")}]`;
+            }
+            if (m.preview) {
+              const filled = Object.entries(m.preview.fieldValues).filter(([,v]) => v).map(([k,v]) => `${k}=${v}`).join(", ");
+              text += `\n[Hợp đồng đã tạo: ${m.preview.templateName}${filled ? ` — ${filled}` : ""}]`;
+            }
+            return { role: m.role === "user" ? "user" : "assistant" as const, text };
+          }),
         }),
       });
       const data = await res.json();
