@@ -22,6 +22,33 @@ async function extractDocxTokens(fileUrl: string): Promise<string[]> {
   }
 }
 
+function remapFieldValues(
+  aiValues: Record<string, string>,
+  templateFields: { name: string; label: string; type: string }[]
+): Record<string, string> {
+  if (!templateFields.length) return aiValues;
+  const result: Record<string, string> = {};
+  const fieldNames = templateFields.map(f => f.name);
+
+  for (const [aiKey, aiVal] of Object.entries(aiValues)) {
+    if (!aiVal && aiVal !== "") { result[aiKey] = aiVal; continue; }
+    // 1. Exact match
+    if (fieldNames.includes(aiKey)) { result[aiKey] = aiVal; continue; }
+    // 2. Case-insensitive exact match
+    const ciMatch = fieldNames.find(n => n.toLowerCase() === aiKey.toLowerCase());
+    if (ciMatch) { result[ciMatch] = aiVal; continue; }
+    // 3. Substring: field name contains aiKey or aiKey contains field name
+    const subMatch = fieldNames.find(n =>
+      n.toLowerCase().includes(aiKey.toLowerCase()) ||
+      aiKey.toLowerCase().includes(n.toLowerCase())
+    );
+    if (subMatch && !result[subMatch]) { result[subMatch] = aiVal; continue; }
+    // 4. No match — keep original key
+    result[aiKey] = aiVal;
+  }
+  return result;
+}
+
 export async function POST(req: Request) {
   const session = await auth();
   if (!session?.user) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -144,11 +171,16 @@ LUÔN trả về JSON hợp lệ. KHÔNG giải thích thêm ngoài JSON. Luôn 
     }
 
     if (result.type === "direct") {
+      const chosenTemplate = templatesWithFields.find(t => t.id === result.templateId) ?? templatesWithFields[0];
+      const remapped = remapFieldValues(
+        (result.fieldValues ?? {}) as Record<string, string>,
+        chosenTemplate?.fields ?? []
+      );
       return NextResponse.json({
         type: "direct",
         templateId: result.templateId,
         templateName: result.templateName,
-        fieldValues: result.fieldValues ?? {},
+        fieldValues: remapped,
         message: result.message ?? "Đã tạo hợp đồng!",
       });
     }
