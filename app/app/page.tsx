@@ -8,7 +8,13 @@ type Template = {
   placeholders: Field[]; fileUrl: string; createdAt: string;
 };
 type View = "home" | "upload" | "setup" | "chat" | "fill" | "preview";
-type ChatMsg = { role: "user" | "ai"; text: string; form?: { templateId: string; templateName: string; fields: Field[]; prefilled: Record<string, string> } };
+type ChatMsg = {
+  role: "user" | "ai";
+  text: string;
+  form?: { templateId: string; templateName: string; fields: Field[]; prefilled: Record<string, string> };
+  preview?: { html: string; templateId: string; templateName: string; fieldValues: Record<string, string> };
+  attachment?: { name: string; type: "image" | "docx" };
+};
 
 const CATEGORIES = [
   "Hợp đồng dịch vụ", "Hợp đồng lao động", "Hợp đồng mua bán",
@@ -49,6 +55,8 @@ export default function AppPage() {
   const [chatGenerating, setChatGenerating] = useState(false); // generating contract after AI decides
   const [inlineFormValues, setInlineFormValues] = useState<Record<string, Record<string, string>>>({});
   const chatBottomRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [uploadingFile, setUploadingFile] = useState(false);
 
   // Preview state
   const [previewHtml, setPreviewHtml] = useState("");
@@ -254,8 +262,7 @@ export default function AppPage() {
       const data = await res.json();
 
       if (data.type === "direct") {
-        // AI has enough info — show message then generate
-        setChatMsgs(prev => [...prev, { role: "ai", text: (data.message ?? "Được rồi! Đang tạo hợp đồng cho bạn...") + "\n\n⏳ Đang xử lý..." }]);
+        setChatMsgs(prev => [...prev, { role: "ai", text: (data.message ?? "Được rồi! Đang tạo hợp đồng...") }]);
         setChatLoading(false);
         setChatGenerating(true);
         try {
@@ -266,10 +273,12 @@ export default function AppPage() {
           });
           const { html } = await genRes.json();
           const tpl = templates.find(t => t.id === data.templateId) ?? { id: data.templateId, name: data.templateName ?? "Hợp đồng", category: "", description: "", placeholders: [], fileUrl: "", createdAt: "" };
-          setPreviewHtml(html);
-          setPreviewTemplate(tpl as Template);
-          setPreviewFillValues(data.fieldValues as Record<string, string> ?? {});
-          setView("preview");
+          // Show preview inline in chat
+          setChatMsgs(prev => [...prev, {
+            role: "ai",
+            text: "✅ Hợp đồng đã sẵn sàng! Bạn có thể xem bên dưới và xuất file.",
+            preview: { html, templateId: data.templateId as string, templateName: (data.templateName as string) ?? tpl.name, fieldValues: data.fieldValues as Record<string, string> ?? {} },
+          }]);
         } catch {
           setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi tạo hợp đồng. Bạn thử lại nhé!" }]);
         }
@@ -309,6 +318,31 @@ export default function AppPage() {
       setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi tạo hợp đồng. Thử lại nhé!" }]);
     }
     setChatLoading(false);
+  }
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+    setUploadingFile(true);
+    // Show user message with attachment
+    setChatMsgs(prev => [...prev, { role: "user", text: `📎 ${file.name}`, attachment: { name: file.name, type: file.name.endsWith(".docx") ? "docx" : "image" } }]);
+    const fd = new FormData();
+    fd.append("file", file);
+    try {
+      const res = await fetch("/api/ai/chat-upload", { method: "POST", body: fd });
+      const data = await res.json();
+      if (!res.ok) {
+        setChatMsgs(prev => [...prev, { role: "ai", text: `❌ Không đọc được file: ${data.error}` }]);
+      } else {
+        setChatMsgs(prev => [...prev, { role: "ai", text: data.message }]);
+        // Now ask AI to process the extracted content
+        await handleChatSend(`[File đính kèm: ${file.name}]\nNội dung: ${data.content}`);
+      }
+    } catch {
+      setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi đọc file. Thử lại nhé!" }]);
+    }
+    setUploadingFile(false);
   }
 
   function goUpload() {
@@ -390,7 +424,7 @@ export default function AppPage() {
         .tpl-card{background:var(--white);border:1.5px solid var(--border);border-radius:var(--r-md);padding:22px;transition:all .2s;display:flex;flex-direction:column;gap:10px;}
         .tpl-card:hover{border-color:var(--blue);box-shadow:var(--sh-md);transform:translateY(-2px);}
         .tpl-cat{font-size:11px;color:var(--blue);font-weight:700;background:var(--bsoft);padding:3px 10px;border-radius:20px;display:inline-block;text-transform:uppercase;letter-spacing:.4px;}
-        .tpl-name{font-size:16px;font-weight:700;color:var(--ink);line-height:1.3;}
+        .tpl-name{font-size:15px;font-weight:700;color:var(--ink);line-height:1.3;text-transform:none;}
         .tpl-desc{font-size:13px;color:var(--t2);line-height:1.5;}
         .tpl-meta{display:flex;gap:12px;font-size:12px;color:var(--t4);}
         .tpl-actions{display:flex;gap:8px;margin-top:4px;}
@@ -417,21 +451,31 @@ export default function AppPage() {
         .drop-zone:hover,.drop-zone.has-file{border-color:var(--blue);background:var(--bsoft);}
 
         /* Chat */
-        .chat-wrap{max-width:800px;margin:0 auto;padding:24px 24px 0;display:flex;flex-direction:column;height:calc(100vh - 62px);}
-        .chat-msgs{flex:1;overflow-y:auto;padding-bottom:24px;display:flex;flex-direction:column;gap:16px;}
+        .chat-wrap{max-width:800px;margin:0 auto;padding:0 24px;display:flex;flex-direction:column;height:calc(100vh - 62px);overflow:hidden;}
+        .chat-msgs{flex:1;overflow-y:auto;padding:24px 0 16px;display:flex;flex-direction:column;gap:16px;min-height:0;}
         .chat-bubble{max-width:80%;padding:14px 18px;border-radius:18px;font-size:14px;line-height:1.6;white-space:pre-wrap;}
         .chat-bubble.user{background:var(--grad);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
         .chat-bubble.ai{background:var(--white);border:1px solid var(--border);color:var(--ink);align-self:flex-start;border-bottom-left-radius:4px;box-shadow:var(--sh-sm);}
-        .chat-input-row{display:flex;gap:10px;padding:16px 0 24px;border-top:1px solid var(--border);background:var(--bg);position:sticky;bottom:0;}
-        .chat-input{flex:1;padding:12px 16px;border:1.5px solid var(--border2);border-radius:24px;font-size:14px;font-family:var(--sans);outline:none;resize:none;background:var(--white);max-height:120px;}
+        .chat-input-row{display:flex;gap:8px;padding:12px 0 20px;border-top:1px solid var(--border);flex-shrink:0;align-items:flex-end;}
+        .chat-input{flex:1;padding:12px 16px;border:1.5px solid var(--border2);border-radius:16px;font-size:14px;font-family:var(--sans);outline:none;resize:none;background:var(--white);min-height:44px;max-height:160px;line-height:1.5;overflow-y:auto;}
         .chat-input:focus{border-color:var(--blue);}
         .chat-send{width:44px;height:44px;border-radius:50%;background:var(--grad);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:opacity .15s;}
         .chat-send:hover{opacity:.85;}
         .chat-send:disabled{opacity:.4;cursor:not-allowed;}
+        .chat-attach{width:40px;height:40px;border-radius:50%;background:var(--white);color:var(--t2);border:1.5px solid var(--border2);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:all .15s;}
+        .chat-attach:hover{border-color:var(--blue);color:var(--blue);}
+        .chat-attach:disabled{opacity:.4;cursor:not-allowed;}
         .chat-empty{text-align:center;padding:60px 24px 24px;}
         .chat-suggestion{display:inline-block;padding:8px 16px;background:var(--white);border:1.5px solid var(--bborder);border-radius:20px;font-size:13px;color:var(--blue);cursor:pointer;transition:all .15s;margin:4px;}
         .chat-suggestion:hover{background:var(--bsoft);}
         .inline-form{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:18px;margin-top:12px;}
+        .preview-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-md);margin-top:12px;overflow:hidden;max-width:100%;}
+        .preview-card-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg);}
+        .preview-card-body{max-height:400px;overflow-y:auto;padding:24px 28px;font-family:'Times New Roman',Times,serif;font-size:13px;line-height:1.8;color:#1e293b;}
+        .preview-card-body p:not([style*="text-align"]){text-align:justify;}
+        .preview-card-body p{margin-bottom:8px;}
+        .preview-card-body table{border-collapse:collapse;width:100%;margin:8px 0;}
+        .preview-card-body td,.preview-card-body th{border:1px solid #e2e8f0;padding:6px 10px;font-size:12px;}
 
         /* Page header */
         .page-header{margin-bottom:28px;}
@@ -600,6 +644,38 @@ export default function AppPage() {
                     </button>
                   </div>
                 )}
+                {m.preview && (
+                  <div className="preview-card" style={{ alignSelf:"flex-start", width:"100%" }}>
+                    <div className="preview-card-header">
+                      <span style={{ fontWeight:700, fontSize:13, color:"var(--ink)" }}>📄 {m.preview.templateName}</span>
+                      <div style={{ display:"flex", gap:8 }}>
+                        <button className="btn-sec" style={{ fontSize:12, padding:"5px 12px" }}
+                          onClick={() => {
+                            const win = window.open("", "_blank");
+                            if (!win) { alert("Vui lòng cho phép popup"); return; }
+                            win.document.write("<html><body>" + m.preview!.html + "<script>window.print();<\/script></body></html>");
+                            win.document.close();
+                          }}>📄 PDF</button>
+                        <button className="btn-pri" style={{ fontSize:12, padding:"5px 12px" }}
+                          onClick={async () => {
+                            const title = m.preview!.templateName + " - " + new Date().toLocaleDateString("vi-VN");
+                            const cr = await fetch("/api/contracts", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ title, templateId: m.preview!.templateId, fieldValues: m.preview!.fieldValues }) });
+                            if (!cr.ok) { alert("Lỗi lưu"); return; }
+                            const { id } = await cr.json();
+                            const er = await fetch(`/api/contracts/${id}/export`, { method:"POST" });
+                            if (er.ok) {
+                              const blob = await er.blob();
+                              const url = URL.createObjectURL(blob);
+                              const a = document.createElement("a"); a.href = url;
+                              a.download = title.replace(/[^a-zA-Z0-9]/g, "_") + ".docx"; a.click();
+                              URL.revokeObjectURL(url);
+                            }
+                          }}>⬇️ DOCX</button>
+                      </div>
+                    </div>
+                    <div className="preview-card-body" dangerouslySetInnerHTML={{ __html: m.preview.html }} />
+                  </div>
+                )}
               </div>
             ))}
 
@@ -622,17 +698,27 @@ export default function AppPage() {
           </div>
 
           <div className="chat-input-row">
+            <input ref={fileInputRef} type="file" accept=".docx,image/*" style={{ display:"none" }}
+              onChange={handleFileUpload} />
+            <button className="chat-attach" disabled={chatLoading || chatGenerating || uploadingFile}
+              onClick={() => fileInputRef.current?.click()} title="Đính kèm file hoặc ảnh">
+              {uploadingFile ? <Loader2 size={16} style={{ animation:"spin 1s linear infinite" }} /> : "📎"}
+            </button>
             <textarea
               className="chat-input"
               rows={1}
               value={chatInput}
-              placeholder="Nhắn tin... VD: Tạo hợp đồng KOL với Nguyễn Văn A, 30 triệu, thời hạn 3 tháng"
-              onChange={e => setChatInput(e.target.value)}
+              placeholder="Nhắn tin... hoặc đính kèm file 📎"
+              onChange={e => {
+                setChatInput(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
+              }}
               onKeyDown={e => {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
               }}
             />
-            <button className="chat-send" disabled={chatLoading || chatGenerating || !chatInput.trim()} onClick={() => handleChatSend()}>
+            <button className="chat-send" disabled={chatLoading || chatGenerating || uploadingFile || !chatInput.trim()} onClick={() => handleChatSend()}>
               {chatLoading ? <Loader2 size={18} style={{ animation:"spin 1s linear infinite" }} /> : "↑"}
             </button>
           </div>
