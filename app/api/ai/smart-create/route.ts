@@ -37,10 +37,9 @@ function remapFieldValues(
     // 2. Case-insensitive exact match
     const ciMatch = fieldNames.find(n => n.toLowerCase() === aiKey.toLowerCase());
     if (ciMatch) { result[ciMatch] = aiVal; continue; }
-    // 3. Substring: field name contains aiKey or aiKey contains field name
+    // 3. Substring: field name contains aiKey
     const subMatch = fieldNames.find(n =>
-      n.toLowerCase().includes(aiKey.toLowerCase()) ||
-      aiKey.toLowerCase().includes(n.toLowerCase())
+      n.toLowerCase().includes(aiKey.toLowerCase())
     );
     if (subMatch && !result[subMatch]) { result[subMatch] = aiVal; continue; }
     // 4. No match — keep original key
