@@ -411,6 +411,14 @@ export default function AppPage() {
     setView("upload");
   }
 
+  function startChat(greeting?: string) {
+    if (chatMsgs.length === 0) {
+      const welcome = greeting ?? "Xin chào! Tôi là trợ lý AI của **Contract Faster** 👋\n\nTôi có thể giúp bạn:\n- **Tạo hợp đồng** chỉ bằng cách mô tả yêu cầu\n- **Điền tự động** thông tin vào template\n- **Trả lời câu hỏi** về hợp đồng\n\nBạn cần tạo loại hợp đồng gì hôm nay?";
+      setChatMsgs([{ role: "ai", text: welcome }]);
+    }
+    setView("chat");
+  }
+
   function renderMarkdown(text: string): string {
     return text
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
@@ -576,10 +584,10 @@ export default function AppPage() {
         <div className="nav-inner">
           <div className="nav-logo" onClick={() => setView("home")}>⚡ Contract Faster</div>
           <button className={`nav-btn ${view === "home" ? "active" : ""}`} onClick={() => setView("home")}>🏠 Templates</button>
-          <button className={`nav-btn ${view === "chat" ? "active" : ""}`} onClick={() => { setChatMsgs([]); setView("chat"); }}>💬 Tạo hợp đồng</button>
+          <button className={`nav-btn ${view === "chat" ? "active" : ""}`} onClick={() => startChat()}>💬 Tạo hợp đồng</button>
           <button className={`nav-btn ${view === "upload" ? "active" : ""}`} onClick={goUpload}>📤 Upload</button>
           <div className="nav-right">
-            <button className="btn-pri" onClick={() => { setChatMsgs([]); setView("chat"); }}>💬 Tạo hợp đồng mới</button>
+            <button className="btn-pri" onClick={() => startChat()}>💬 Tạo hợp đồng mới</button>
           </div>
         </div>
       </nav>
@@ -630,10 +638,7 @@ export default function AppPage() {
                   </div>
                   <div className="tpl-actions">
                     <button className="btn-pri" style={{ flex:1, justifyContent:"center" }}
-                      onClick={() => {
-                        setChatMsgs([{ role:"ai", text:`Bạn muốn tạo hợp đồng **"${t.name}"** đúng không? 😊\n\nHãy cho tôi biết thêm thông tin:\n• Tên các bên ký kết\n• Giá trị hợp đồng (nếu có)\n• Thời gian thực hiện\n\nHoặc bạn cứ mô tả tự nhiên, tôi sẽ hỏi thêm từng bước!` }]);
-                        setView("chat");
-                      }}>
+                      onClick={() => startChat(`Bạn muốn tạo hợp đồng **"${t.name}"** đúng không? 😊\n\nHãy cho tôi biết thêm thông tin:\n• Tên các bên ký kết\n• Giá trị hợp đồng (nếu có)\n• Thời gian thực hiện\n\nHoặc bạn cứ mô tả tự nhiên, tôi sẽ hỏi thêm từng bước!`)}>
                       💬 Tạo bằng AI
                     </button>
                     <button className="btn-sec" style={{ padding:"9px 12px", fontSize:12 }} title="Điền thủ công" onClick={() => startFill(t)}>✍️</button>
