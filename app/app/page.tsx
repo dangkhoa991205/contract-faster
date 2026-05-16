@@ -414,10 +414,7 @@ export default function AppPage() {
   function renderMarkdown(text: string): string {
     return text
       .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-      .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>")
-      .replace(/^[-•]\s+(.+)$/gm, "<li>$1</li>")
-      .replace(/(<li>[^<]*<\/li>\n?)+/g, (m) => `<ul style="padding-left:18px;margin:6px 0;">${m}</ul>`)
-      .replace(/^\d+\.\s+(.+)$/gm, "<li>$1</li>")
+      .replace(/^[-•]\s+(.+)$/gm, "• $1")
       .replace(/\n/g, "<br>");
   }
 
