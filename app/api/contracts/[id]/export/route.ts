@@ -34,7 +34,12 @@ export async function POST(
       nullGetter: () => "",
     });
 
-    doc.render(contract.fieldValues as Record<string, string>);
+    const rawValues = (contract.fieldValues ?? {}) as Record<string, unknown>;
+    const safeValues: Record<string, string> = {};
+    for (const [k, v] of Object.entries(rawValues)) {
+      safeValues[k] = v == null ? "" : String(v);
+    }
+    doc.render(safeValues);
 
     const outputBuffer = doc
       .getZip()

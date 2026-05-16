@@ -103,17 +103,20 @@ export async function POST(req: Request) {
         if (t && !t.startsWith("#") && !t.startsWith("/")) docxTokens.add(t);
       }
 
-      const incoming = fieldValues as Record<string, string | null>;
+      // Coerce all incoming values to strings — AI may return numbers/null
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const incoming = fieldValues as Record<string, any>;
       const safeValues: Record<string, string> = {};
       for (const token of docxTokens) {
         const tokenLower = token.toLowerCase();
         const match = Object.entries(incoming).find(
           ([k]) => k === token || k.toLowerCase() === tokenLower
         );
-        safeValues[token] = match ? (match[1] ?? "") : "";
+        const val = match ? match[1] : null;
+        safeValues[token] = val == null ? "" : String(val);
       }
       for (const [k, v] of Object.entries(incoming)) {
-        if (!(k in safeValues)) safeValues[k] = v ?? "";
+        if (!(k in safeValues)) safeValues[k] = v == null ? "" : String(v);
       }
 
       try {
