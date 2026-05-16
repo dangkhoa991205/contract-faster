@@ -4,15 +4,14 @@ import { db } from "@/lib/db";
 import Stripe from "stripe";
 type Plan = "FREE" | "SOLO" | "TEAM" | "ENTERPRISE";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-const PRICE_TO_PLAN: Record<string, Plan> = {
-  [process.env.STRIPE_PRICE_SOLO!]: "SOLO",
-  [process.env.STRIPE_PRICE_TEAM!]: "TEAM",
-  [process.env.STRIPE_PRICE_ENTERPRISE!]: "ENTERPRISE",
-};
-
 export async function POST(req: Request) {
+  if (!process.env.STRIPE_SECRET_KEY) return NextResponse.json({ error: "Stripe not configured" }, { status: 503 });
+  const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+  const PRICE_TO_PLAN: Record<string, Plan> = {
+    [process.env.STRIPE_PRICE_SOLO ?? ""]: "SOLO",
+    [process.env.STRIPE_PRICE_TEAM ?? ""]: "TEAM",
+    [process.env.STRIPE_PRICE_ENTERPRISE ?? ""]: "ENTERPRISE",
+  };
   const body = await req.text();
   const headersList = await headers();
   const signature = headersList.get("stripe-signature")!;

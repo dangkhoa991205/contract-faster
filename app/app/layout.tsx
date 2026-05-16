@@ -9,9 +9,8 @@ export default async function AppLayout({
   await requireAuth();
 
   return (
-    <div className="flex min-h-screen bg-zinc-50">
-      <AppSidebar />
-      <main className="flex-1 overflow-auto">{children}</main>
+    <div className="flex h-screen overflow-hidden" style={{ background: "#f8fafc" }}>
+      <main className="flex-1 overflow-auto flex flex-col">{children}</main>
     </div>
   );
 }

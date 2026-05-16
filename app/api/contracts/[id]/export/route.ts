@@ -1,8 +1,9 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { readFile, writeFile, mkdir } from "fs/promises";
+import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { readDocxBuffer } from "@/lib/read-file";
 import PizZip from "pizzip";
 import Docxtemplater from "docxtemplater";
 
@@ -26,11 +27,7 @@ export async function POST(
     return NextResponse.json({ error: "Contract not found" }, { status: 404 });
   }
 
-  const templatePath = join(
-    process.cwd(),
-    contract.template.fileUrl.replace(/^\//, "")
-  );
-  const templateBuffer = await readFile(templatePath);
+  const templateBuffer = await readDocxBuffer(contract.template.fileUrl);
 
   const zip = new PizZip(templateBuffer);
   const doc = new Docxtemplater(zip, {

@@ -10,40 +10,49 @@ const PLANS = [
     name: "Free",
     price: "$0",
     period: "mãi mãi",
-    features: ["3 hợp đồng", "Template có sẵn", "Xuất DOCX"],
+    color: "rgba(255,255,255,0.07)",
+    borderColor: "rgba(255,255,255,0.08)",
+    accent: "#9ca3af",
+    features: ["3 hợp đồng/tháng", "Template có sẵn", "Xuất DOCX"],
     cta: "Bắt đầu miễn phí",
     href: "/auth/login",
-    highlighted: false,
   },
   {
     key: "SOLO",
     name: "Solo",
     price: "$9",
-    period: "tháng",
-    features: ["50 hợp đồng/tháng", "Upload template riêng", "AI Smart Fill", "AI Chat 20 msg/ngày", "Xuất DOCX"],
+    period: "/tháng",
+    color: "rgba(99,102,241,0.07)",
+    borderColor: "rgba(99,102,241,0.25)",
+    accent: "#a5b4fc",
+    features: ["50 hợp đồng/tháng", "Upload template riêng", "AI Smart Fill", "20 AI chat/ngày", "Voice commands"],
     cta: "Chọn Solo",
     href: null,
-    highlighted: false,
   },
   {
     key: "TEAM",
     name: "Team",
     price: "$29",
-    period: "tháng",
+    period: "/tháng",
+    color: "rgba(20,184,166,0.08)",
+    borderColor: "rgba(20,184,166,0.35)",
+    accent: "#5eead4",
+    popular: true,
     features: ["Không giới hạn hợp đồng", "Chia sẻ template trong team", "AI Chat không giới hạn", "Tối đa 10 thành viên", "Đa ngôn ngữ"],
     cta: "Chọn Team",
     href: null,
-    highlighted: true,
   },
   {
     key: "ENTERPRISE",
     name: "Enterprise",
     price: "$99",
-    period: "tháng",
-    features: ["Không giới hạn mọi thứ", "Custom template library", "Thành viên không giới hạn", "Priority support"],
+    period: "/tháng",
+    color: "rgba(168,85,247,0.07)",
+    borderColor: "rgba(168,85,247,0.25)",
+    accent: "#d8b4fe",
+    features: ["Không giới hạn mọi thứ", "White-label", "API access", "Thành viên không giới hạn", "Priority support 24/7"],
     cta: "Chọn Enterprise",
     href: null,
-    highlighted: false,
   },
 ];
 
@@ -51,10 +60,7 @@ export default function PricingPage() {
   const router = useRouter();
 
   async function handleSelect(planKey: string, href: string | null) {
-    if (href) {
-      router.push(href);
-      return;
-    }
+    if (href) { router.push(href); return; }
     const res = await fetch("/api/stripe/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -69,58 +75,119 @@ export default function PricingPage() {
   }
 
   return (
-    <div className="min-h-screen bg-white">
-      <nav className="border-b border-zinc-100 px-6 py-4 flex items-center justify-between max-w-6xl mx-auto">
-        <Link href="/" className="font-semibold text-zinc-900">Contract Faster</Link>
-        <Link href="/auth/login" className="text-sm text-indigo-600 hover:underline">
-          Đăng nhập
+    <div style={{ background: "#05060f", minHeight: "100vh", color: "#e8eaf0" }}>
+      {/* Nav */}
+      <nav style={{
+        maxWidth: 1120, margin: "0 auto", padding: "0 24px",
+        height: 64, display: "flex", alignItems: "center", justifyContent: "space-between",
+        borderBottom: "1px solid rgba(255,255,255,0.05)",
+      }}>
+        <Link href="/" style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none" }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: 7,
+            background: "linear-gradient(135deg, #6366f1, #14b8a6)",
+            display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14,
+          }}>⚡</div>
+          <span style={{ color: "white", fontWeight: 600, fontSize: 14 }}>Contract Faster</span>
+        </Link>
+        <Link href="/auth/login" style={{ color: "#a5b4fc", fontSize: 14, textDecoration: "none" }}>
+          Đăng nhập →
         </Link>
       </nav>
 
-      <div className="max-w-5xl mx-auto px-6 py-20">
-        <h1 className="text-4xl font-bold text-center text-zinc-900 mb-4">Pricing</h1>
-        <p className="text-center text-zinc-500 mb-12">
-          Bắt đầu miễn phí, nâng cấp khi bạn cần.
-        </p>
+      <div style={{ maxWidth: 1000, margin: "0 auto", padding: "72px 24px 100px" }}>
+        {/* Header */}
+        <div style={{ textAlign: "center", marginBottom: 60 }}>
+          <div style={{
+            display: "inline-flex", alignItems: "center", gap: 6,
+            background: "rgba(99,102,241,0.1)", border: "1px solid rgba(99,102,241,0.25)",
+            borderRadius: 100, padding: "5px 14px", fontSize: 12, color: "#a5b4fc",
+            marginBottom: 20, fontWeight: 500,
+          }}>
+            Pricing
+          </div>
+          <h1 style={{
+            fontFamily: "'Instrument Serif', Georgia, serif",
+            fontSize: "clamp(36px, 5vw, 56px)",
+            fontWeight: 400, fontStyle: "italic",
+            color: "white", margin: "0 0 14px", lineHeight: 1.1, letterSpacing: "-0.02em",
+          }}>
+            Start free.<br />
+            <span style={{
+              background: "linear-gradient(135deg, #818cf8, #5eead4)",
+              WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text",
+            }}>Scale when ready.</span>
+          </h1>
+          <p style={{ color: "rgba(232,234,240,0.45)", fontSize: 16, lineHeight: 1.6 }}>
+            Bắt đầu miễn phí với 3 hợp đồng/tháng. Nâng cấp khi doanh nghiệp của bạn lớn hơn.
+          </p>
+        </div>
 
-        <div className="grid grid-cols-4 gap-5">
+        {/* Plans grid */}
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(210px, 1fr))", gap: 16 }}>
           {PLANS.map((plan) => (
             <div
               key={plan.key}
-              className={`rounded-2xl border p-6 flex flex-col ${
-                plan.highlighted
-                  ? "border-indigo-400 bg-indigo-50 ring-2 ring-indigo-400"
-                  : "border-zinc-200 bg-white"
-              }`}
+              style={{
+                background: plan.color,
+                border: `1px solid ${plan.borderColor}`,
+                borderRadius: 18,
+                padding: "28px 24px",
+                display: "flex", flexDirection: "column",
+                position: "relative",
+              }}
             >
-              {plan.highlighted && (
-                <div className="text-xs font-medium text-indigo-600 mb-2">Phổ biến nhất</div>
+              {plan.popular && (
+                <div style={{
+                  position: "absolute", top: -12, left: "50%", transform: "translateX(-50%)",
+                  background: "#14b8a6", color: "white",
+                  fontSize: 11, fontWeight: 600,
+                  padding: "3px 14px", borderRadius: 100, whiteSpace: "nowrap",
+                }}>
+                  Phổ biến nhất
+                </div>
               )}
-              <div className="font-bold text-lg text-zinc-900 mb-1">{plan.name}</div>
-              <div className="mb-4">
-                <span className="text-3xl font-bold text-zinc-900">{plan.price}</span>
-                <span className="text-zinc-500 text-sm">/{plan.period}</span>
+
+              <div style={{ marginBottom: 4, fontSize: 16, fontWeight: 600, color: "white" }}>{plan.name}</div>
+              <div style={{ marginBottom: 20 }}>
+                <span style={{ fontSize: 36, fontWeight: 700, color: plan.accent, lineHeight: 1 }}>{plan.price}</span>
+                <span style={{ fontSize: 13, color: "rgba(255,255,255,0.35)", marginLeft: 2 }}>{plan.period}</span>
               </div>
-              <ul className="space-y-2 mb-6 flex-1">
+
+              <ul style={{ listStyle: "none", padding: 0, margin: "0 0 24px", flex: 1, display: "flex", flexDirection: "column", gap: 10 }}>
                 {plan.features.map((f) => (
-                  <li key={f} className="flex items-start gap-2 text-sm text-zinc-600">
-                    <Check className="w-4 h-4 text-indigo-600 flex-shrink-0 mt-0.5" />
+                  <li key={f} style={{ display: "flex", alignItems: "flex-start", gap: 8, fontSize: 13, color: "rgba(232,234,240,0.55)" }}>
+                    <Check style={{ width: 14, height: 14, flexShrink: 0, marginTop: 1, color: plan.accent }} />
                     {f}
                   </li>
                 ))}
               </ul>
+
               <button
-                onClick={() => handleSelect(plan.key, plan.href)}
-                className={`w-full py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                  plan.highlighted
-                    ? "bg-indigo-600 text-white hover:bg-indigo-700"
-                    : "border border-zinc-300 text-zinc-700 hover:bg-zinc-50"
-                }`}
+                onClick={() => handleSelect(plan.key, plan.href ?? null)}
+                style={{
+                  width: "100%", padding: "11px",
+                  background: plan.popular ? "#14b8a6" : `${plan.borderColor}`,
+                  border: `1px solid ${plan.borderColor}`,
+                  borderRadius: 10, color: plan.popular ? "white" : plan.accent,
+                  fontSize: 14, fontWeight: 500, cursor: "pointer",
+                  transition: "opacity 0.15s",
+                }}
               >
                 {plan.cta}
               </button>
             </div>
           ))}
+        </div>
+
+        {/* FAQ */}
+        <div style={{ marginTop: 72, textAlign: "center" }}>
+          <p style={{ color: "rgba(232,234,240,0.35)", fontSize: 14 }}>
+            Câu hỏi? Email chúng tôi tại{" "}
+            <a href="mailto:hello@contractfaster.io" style={{ color: "#a5b4fc", textDecoration: "none" }}>
+              hello@contractfaster.io
+            </a>
+          </p>
         </div>
       </div>
     </div>

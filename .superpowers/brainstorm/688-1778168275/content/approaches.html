@@ -1,0 +1,63 @@
+<h2>3 Hướng tiếp cận kiến trúc sản phẩm</h2>
+<p class="subtitle">Chọn hướng phù hợp nhất với vision của bạn</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Template-First (Khuyến nghị)</h3>
+      <p>Luồng chính: <strong>Chọn/Upload template → AI nhận diện placeholder → Người dùng điền (AI gợi ý) → Xuất PDF/Word</strong></p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ưu điểm</h4><ul>
+          <li>Rõ ràng, dễ dùng</li>
+          <li>Kết quả hợp đồng nhất quán và chính xác</li>
+          <li>AI hỗ trợ nhưng người dùng kiểm soát</li>
+          <li>Dễ build giai đoạn 1</li>
+        </ul></div>
+        <div class="cons"><h4>Nhược điểm</h4><ul>
+          <li>AI ít "wow" hơn cách B</li>
+          <li>Cần có template trước mới dùng được</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>AI-First (Conversational)</h3>
+      <p>Luồng chính: <strong>Chat với AI mô tả nhu cầu → AI tạo/điền hợp đồng → Người dùng review → Xuất file</strong></p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ưu điểm</h4><ul>
+          <li>Trải nghiệm "wow", khác biệt thị trường</li>
+          <li>Không cần biết template</li>
+          <li>Phù hợp người dùng không rành pháp lý</li>
+        </ul></div>
+        <div class="cons"><h4>Nhược điểm</h4><ul>
+          <li>AI có thể tạo nội dung sai/thiếu chính xác</li>
+          <li>Chi phí OpenAI cao hơn</li>
+          <li>Phức tạp hơn để build đúng</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Hybrid (Cả hai luồng song song)</h3>
+      <p>Người dùng chọn: <strong>Bắt đầu từ template</strong> hoặc <strong>Chat với AI để tạo mới</strong> — AI hỗ trợ ở cả hai</p>
+      <div class="pros-cons">
+        <div class="pros"><h4>Ưu điểm</h4><ul>
+          <li>Linh hoạt nhất cho cả freelancer lẫn SMB</li>
+          <li>Có thể phân tier: Template (gói thấp) / AI Chat (gói cao)</li>
+          <li>Cover được nhiều use case</li>
+        </ul></div>
+        <div class="cons"><h4>Nhược điểm</h4><ul>
+          <li>Scope lớn hơn, mất nhiều thời gian build hơn</li>
+          <li>UX cần thiết kế cẩn thận để không gây nhầm lẫn</li>
+        </ul></div>
+      </div>
+    </div>
+  </div>
+</div>

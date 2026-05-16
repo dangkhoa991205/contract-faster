@@ -5,7 +5,7 @@ type QuotaLimits = {
   aiChatsPerDay: number;
 };
 
-export function getQuotaLimits(plan: Plan): QuotaLimits {
+export function getQuotaLimits(plan: Plan | string): QuotaLimits {
   switch (plan) {
     case "FREE":
       return { contracts: 3, aiChatsPerDay: 0 };
@@ -15,5 +15,7 @@ export function getQuotaLimits(plan: Plan): QuotaLimits {
       return { contracts: Infinity, aiChatsPerDay: Infinity };
     case "ENTERPRISE":
       return { contracts: Infinity, aiChatsPerDay: Infinity };
+    default:
+      return { contracts: 3, aiChatsPerDay: 0 };
   }
 }

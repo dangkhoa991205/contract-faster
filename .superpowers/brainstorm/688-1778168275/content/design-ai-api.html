@@ -1,0 +1,100 @@
+<h2>Design — Phần 3: AI Features & API</h2>
+<p class="subtitle">Cách AI hoạt động và các API endpoints</p>
+
+<div class="section">
+  <h3>3 tính năng AI và cách hoạt động</h3>
+  <div style="display:grid;grid-template-columns:1fr;gap:10px;font-size:13px">
+
+    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+      <div style="font-weight:600;margin-bottom:6px">🔍 1. Placeholder Detection (khi upload template)</div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:1;background:#f8fafc;border-radius:6px;padding:8px;font-family:monospace;font-size:11px">
+          Input: file .docx<br/>
+          ↓ mammoth.js đọc text<br/>
+          ↓ Gửi lên OpenAI GPT-4o<br/>
+          ↓ Prompt: "Tìm tất cả placeholder<br/>&nbsp;&nbsp;trong hợp đồng này (VD: {{TEN_BEN_A}},<br/>&nbsp;&nbsp;[Ngày ký], ...)"<br/>
+          Output: JSON list các field cần điền
+        </div>
+        <div style="flex:1;background:#f0fdf4;border-radius:6px;padding:8px;font-size:11px">
+          <strong>Kết quả trả về:</strong><br/>
+          [{name: "TEN_BEN_A", label: "Tên bên A", type: "text"},<br/>
+          &nbsp;{name: "NGAY_KY", label: "Ngày ký", type: "date"},<br/>
+          &nbsp;{name: "GIA_TRI", label: "Giá trị HĐ", type: "number"}]
+        </div>
+      </div>
+    </div>
+
+    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+      <div style="font-weight:600;margin-bottom:6px">✨ 2. Smart Fill (khi điền form)</div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:1;background:#f8fafc;border-radius:6px;padding:8px;font-family:monospace;font-size:11px">
+          Input: {field: "GIA_TRI", context: "HĐ dịch vụ thiết kế web"}<br/>
+          ↓ Gửi lên OpenAI<br/>
+          ↓ Prompt: "Gợi ý giá trị hợp lý<br/>&nbsp;&nbsp;cho trường này dựa vào context"<br/>
+          Output: suggestion + explanation
+        </div>
+        <div style="flex:1;background:#f0fdf4;border-radius:6px;padding:8px;font-size:11px">
+          <strong>Hiển thị:</strong><br/>
+          💡 "Thông thường 20-50 triệu VND cho dự án thiết kế web cơ bản"<br/><br/>
+          Cũng nhớ giá trị từ hợp đồng trước (từ DB) để auto-suggest
+        </div>
+      </div>
+    </div>
+
+    <div style="border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+      <div style="font-weight:600;margin-bottom:6px">💬 3. Contract Chat (sidebar AI)</div>
+      <div style="display:flex;gap:12px;align-items:flex-start">
+        <div style="flex:1;background:#f8fafc;border-radius:6px;padding:8px;font-family:monospace;font-size:11px">
+          Input: {question: "Điều khoản phạt nên bao nhiêu?",<br/>&nbsp;&nbsp;contractContent: "..."}<br/>
+          ↓ OpenAI với system prompt<br/>&nbsp;&nbsp;"Bạn là chuyên gia pháp lý VN..."<br/>
+          Output: câu trả lời + disclaimer
+        </div>
+        <div style="flex:1;background:#f0fdf4;border-radius:6px;padding:8px;font-size:11px">
+          <strong>Lưu ý:</strong><br/>
+          - Lưu lịch sử chat vào bảng AiChat<br/>
+          - Luôn kèm disclaimer "Đây không phải tư vấn pháp lý chính thức"<br/>
+          - Rate limit theo plan (Solo: 20 msg/ngày)
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section">
+  <h3>API Routes (Next.js App Router)</h3>
+  <div style="font-size:12px;font-family:monospace;background:#1e1e2e;color:#cdd6f4;border-radius:8px;padding:14px;line-height:2">
+    <span style="color:#89b4fa">POST</span> /api/auth/[...nextauth]       <span style="color:#6c7086">→ NextAuth Google OAuth</span><br/>
+    <span style="color:#89b4fa">POST</span> /api/templates                <span style="color:#6c7086">→ Upload + detect placeholders</span><br/>
+    <span style="color:#a6e3a1">GET</span>  /api/templates                <span style="color:#6c7086">→ Lấy danh sách templates</span><br/>
+    <span style="color:#89b4fa">POST</span> /api/contracts                <span style="color:#6c7086">→ Tạo hợp đồng mới</span><br/>
+    <span style="color:#a6e3a1">GET</span>  /api/contracts                <span style="color:#6c7086">→ Lấy danh sách hợp đồng</span><br/>
+    <span style="color:#89b4fa">POST</span> /api/contracts/[id]/export    <span style="color:#6c7086">→ Xuất PDF hoặc DOCX</span><br/>
+    <span style="color:#89b4fa">POST</span> /api/ai/detect-placeholders   <span style="color:#6c7086">→ GPT-4o nhận diện fields</span><br/>
+    <span style="color:#89b4fa">POST</span> /api/ai/smart-fill            <span style="color:#6c7086">→ Gợi ý giá trị cho field</span><br/>
+    <span style="color:#89b4fa">POST</span> /api/ai/chat                  <span style="color:#6c7086">→ Chat về hợp đồng</span><br/>
+    <span style="color:#89b4fa">POST</span> /api/stripe/checkout          <span style="color:#6c7086">→ Tạo Stripe checkout session</span><br/>
+    <span style="color:#89b4fa">POST</span> /api/stripe/webhook           <span style="color:#6c7086">→ Xử lý Stripe events</span><br/>
+    <span style="color:#a6e3a1">GET</span>  /api/user/usage               <span style="color:#6c7086">→ Kiểm tra quota còn lại</span><br/>
+  </div>
+</div>
+
+<div class="section">
+  <h3>Document Generation Flow</h3>
+  <div style="font-size:12px;background:#f8fafc;border:1px solid #e5e7eb;border-radius:8px;padding:14px">
+    <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;line-height:2.5">
+      <span style="background:#6366f1;color:white;padding:3px 10px;border-radius:16px">User submit form</span>
+      <span>→</span>
+      <span style="background:#6366f1;color:white;padding:3px 10px;border-radius:16px">Load template .docx từ storage</span>
+      <span>→</span>
+      <span style="background:#6366f1;color:white;padding:3px 10px;border-radius:16px">docxtemplater điền placeholder</span>
+      <span>→</span>
+      <span style="background:#10b981;color:white;padding:3px 10px;border-radius:16px">Xuất DOCX</span>
+    </div>
+    <div style="margin-top:6px;color:#6b7280">
+      Template lưu trữ: <strong>giai đoạn 1 dùng local /uploads</strong> → giai đoạn 2 migrate sang AWS S3<br/>
+      PDF: convert từ DOCX bằng thư viện (libreoffice hoặc API)
+    </div>
+  </div>
+</div>
+
+<p style="margin-top:16px;color:#6b7280;font-size:14px">👆 Phần 3/3: AI & API design. Toàn bộ design đã trình bày xong. Bạn approve để tôi viết spec doc không?</p>

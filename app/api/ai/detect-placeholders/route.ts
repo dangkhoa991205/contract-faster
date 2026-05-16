@@ -2,8 +2,7 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { openai } from "@/lib/openai";
 import mammoth from "mammoth";
-import { readFile } from "fs/promises";
-import { join } from "path";
+import { readDocxBuffer } from "@/lib/read-file";
 
 export async function POST(req: Request) {
   const session = await auth();
@@ -16,8 +15,7 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "fileUrl is required" }, { status: 400 });
   }
 
-  const filePath = join(process.cwd(), fileUrl.replace(/^\//, ""));
-  const buffer = await readFile(filePath);
+  const buffer = await readDocxBuffer(fileUrl);
 
   const { value: text } = await mammoth.extractRawText({ buffer });
 

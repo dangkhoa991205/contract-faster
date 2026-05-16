@@ -14,9 +14,23 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing fields" }, { status: 400 });
   }
 
-  const user = await db.user.findUniqueOrThrow({
-    where: { id: session.user.id },
-  });
+  // Mock mode when no OpenAI key
+  if (!process.env.OPENAI_API_KEY) {
+    const mockSuggestions: Record<string, string> = {
+      date: new Date().toLocaleDateString("vi-VN"),
+      number: "10,000,000",
+      email: "contact@example.com",
+      text: `[Gợi ý mẫu cho ${fieldLabel}]`,
+    };
+    return NextResponse.json({ suggestion: mockSuggestions[fieldType ?? "text"] ?? `Mẫu: ${fieldLabel}` });
+  }
+
+  let user;
+  try {
+    user = await db.user.findUniqueOrThrow({ where: { id: session.user.id } });
+  } catch {
+    return NextResponse.json({ suggestion: `[Gợi ý: ${fieldLabel}]` });
+  }
 
   if (user.plan === "FREE") {
     return NextResponse.json(

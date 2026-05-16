@@ -15,9 +15,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Missing message or templateName" }, { status: 400 });
   }
 
-  const user = await db.user.findUniqueOrThrow({
-    where: { id: session.user.id },
-  });
+  // Mock mode when no OpenAI key
+  if (!process.env.OPENAI_API_KEY) {
+    const mockReplies = [
+      `Đây là chế độ demo — chưa kết nối OpenAI. Câu hỏi của bạn: "${message}"\n\nTrong template "${templateName}", bạn có thể tham khảo các điều khoản tiêu chuẩn. ⚠️ Đây chỉ là gợi ý tham khảo, không thay thế tư vấn pháp lý chính thức.`,
+    ];
+    return NextResponse.json({ reply: mockReplies[0] });
+  }
+
+  let user;
+  try {
+    user = await db.user.findUniqueOrThrow({ where: { id: session.user.id } });
+  } catch {
+    return NextResponse.json({ reply: "Xin lỗi, không thể kết nối database." });
+  }
 
   const quota = getQuotaLimits(user.plan);
   if (quota.aiChatsPerDay === 0) {
