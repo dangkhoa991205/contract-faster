@@ -411,6 +411,16 @@ export default function AppPage() {
     setView("upload");
   }
 
+  function renderMarkdown(text: string): string {
+    return text
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, "<em>$1</em>")
+      .replace(/^[-•]\s+(.+)$/gm, "<li>$1</li>")
+      .replace(/(<li>[^<]*<\/li>\n?)+/g, (m) => `<ul style="padding-left:18px;margin:6px 0;">${m}</ul>`)
+      .replace(/^\d+\.\s+(.+)$/gm, "<li>$1</li>")
+      .replace(/\n/g, "<br>");
+  }
+
   return (
     <>
       <style>{`
@@ -674,7 +684,10 @@ export default function AppPage() {
             {chatMsgs.map((m, i) => (
               <div key={i} style={{ display:"flex", flexDirection:"column", alignItems: m.role === "user" ? "flex-end" : "flex-start" }}>
                 <div className={`chat-bubble ${m.role === "user" ? "user" : "ai"}`}>
-                  {m.text}
+                  {m.role === "user"
+                    ? m.text
+                    : <span dangerouslySetInnerHTML={{ __html: renderMarkdown(m.text) }} />
+                  }
                 </div>
                 {/* Inline form inside AI message */}
                 {m.form && (
