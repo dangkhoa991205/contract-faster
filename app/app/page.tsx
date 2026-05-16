@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 
 type Field = { name: string; label: string; type: string; required: boolean };
@@ -46,13 +46,20 @@ export default function AppPage() {
   const [chatMsgs, setChatMsgs] = useState<ChatMsg[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
+  const [chatGenerating, setChatGenerating] = useState(false); // generating contract after AI decides
   const [inlineFormValues, setInlineFormValues] = useState<Record<string, Record<string, string>>>({});
+  const chatBottomRef = useRef<HTMLDivElement>(null);
 
   // Preview state
   const [previewHtml, setPreviewHtml] = useState("");
   const [previewTemplate, setPreviewTemplate] = useState<Template | null>(null);
   const [previewFillValues, setPreviewFillValues] = useState<Record<string, string>>({});
   const [exporting, setExporting] = useState(false);
+
+  // Scroll chat to bottom when messages change
+  useEffect(() => {
+    chatBottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatMsgs, chatLoading]);
 
   useEffect(() => {
     fetch("/api/templates")
@@ -247,19 +254,27 @@ export default function AppPage() {
       const data = await res.json();
 
       if (data.type === "direct") {
-        // AI auto-filled — generate preview directly
-        setChatMsgs(prev => [...prev, { role: "ai", text: data.message ?? "Đang tạo hợp đồng..." }]);
-        const genRes = await fetch("/api/contracts/generate", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ templateId: data.templateId, fieldValues: data.fieldValues ?? {} }),
-        });
-        const { html } = await genRes.json();
-        const tpl = templates.find(t => t.id === data.templateId) ?? { id: data.templateId, name: data.templateName, category: "", description: "", placeholders: [], fileUrl: "", createdAt: "" };
-        setPreviewHtml(html);
-        setPreviewTemplate(tpl);
-        setPreviewFillValues(data.fieldValues ?? {});
-        setView("preview");
+        // AI has enough info — show message then generate
+        setChatMsgs(prev => [...prev, { role: "ai", text: (data.message ?? "Được rồi! Đang tạo hợp đồng cho bạn...") + "\n\n⏳ Đang xử lý..." }]);
+        setChatLoading(false);
+        setChatGenerating(true);
+        try {
+          const genRes = await fetch("/api/contracts/generate", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ templateId: data.templateId, fieldValues: data.fieldValues ?? {} }),
+          });
+          const { html } = await genRes.json();
+          const tpl = templates.find(t => t.id === data.templateId) ?? { id: data.templateId, name: data.templateName ?? "Hợp đồng", category: "", description: "", placeholders: [], fileUrl: "", createdAt: "" };
+          setPreviewHtml(html);
+          setPreviewTemplate(tpl as Template);
+          setPreviewFillValues(data.fieldValues as Record<string, string> ?? {});
+          setView("preview");
+        } catch {
+          setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi tạo hợp đồng. Bạn thử lại nhé!" }]);
+        }
+        setChatGenerating(false);
+        return;
       } else if (data.type === "form") {
         setChatMsgs(prev => [...prev, { role: "ai", text: data.message ?? "Vui lòng điền thêm thông tin:", form: { templateId: data.templateId, templateName: data.templateName, fields: data.fields ?? [], prefilled: data.prefilled ?? {} } }]);
         // Pre-fill inline form values
@@ -502,7 +517,10 @@ export default function AppPage() {
                   </div>
                   <div className="tpl-actions">
                     <button className="btn-pri" style={{ flex:1, justifyContent:"center" }}
-                      onClick={() => { setChatMsgs([{ role:"ai", text:`Bạn muốn tạo hợp đồng "${t.name}" phải không? Hãy cho tôi biết thêm thông tin cần điền nhé!` }]); setView("chat"); }}>
+                      onClick={() => {
+                        setChatMsgs([{ role:"ai", text:`Bạn muốn tạo hợp đồng **"${t.name}"** đúng không? 😊\n\nHãy cho tôi biết thêm thông tin:\n• Tên các bên ký kết\n• Giá trị hợp đồng (nếu có)\n• Thời gian thực hiện\n\nHoặc bạn cứ mô tả tự nhiên, tôi sẽ hỏi thêm từng bước!` }]);
+                        setView("chat");
+                      }}>
                       💬 Tạo bằng AI
                     </button>
                     <button className="btn-sec" style={{ padding:"9px 12px", fontSize:12 }} title="Điền thủ công" onClick={() => startFill(t)}>✍️</button>
@@ -585,15 +603,22 @@ export default function AppPage() {
               </div>
             ))}
 
-            {chatLoading && (
+            {(chatLoading || chatGenerating) && (
               <div style={{ alignSelf:"flex-start" }}>
-                <div className="chat-bubble ai" style={{ display:"flex", gap:4, alignItems:"center" }}>
-                  <span style={{ animation:"bounce 1s infinite", display:"inline-block" }}>●</span>
-                  <span style={{ animation:"bounce 1s .2s infinite", display:"inline-block" }}>●</span>
-                  <span style={{ animation:"bounce 1s .4s infinite", display:"inline-block" }}>●</span>
+                <div className="chat-bubble ai" style={{ display:"flex", gap:6, alignItems:"center", color:"var(--t4)", fontSize:13 }}>
+                  {chatGenerating ? (
+                    <><Loader2 size={14} style={{ animation:"spin 1s linear infinite" }} /> Đang tạo hợp đồng...</>
+                  ) : (
+                    <>
+                      <span style={{ animation:"bounce 1s infinite", display:"inline-block" }}>●</span>
+                      <span style={{ animation:"bounce 1s .2s infinite", display:"inline-block" }}>●</span>
+                      <span style={{ animation:"bounce 1s .4s infinite", display:"inline-block" }}>●</span>
+                    </>
+                  )}
                 </div>
               </div>
             )}
+            <div ref={chatBottomRef} />
           </div>
 
           <div className="chat-input-row">
@@ -607,7 +632,7 @@ export default function AppPage() {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
               }}
             />
-            <button className="chat-send" disabled={chatLoading || !chatInput.trim()} onClick={() => handleChatSend()}>
+            <button className="chat-send" disabled={chatLoading || chatGenerating || !chatInput.trim()} onClick={() => handleChatSend()}>
               {chatLoading ? <Loader2 size={18} style={{ animation:"spin 1s linear infinite" }} /> : "↑"}
             </button>
           </div>
