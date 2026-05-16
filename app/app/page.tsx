@@ -457,8 +457,8 @@ export default function AppPage() {
         .chat-bubble.user{background:var(--grad);color:#fff;align-self:flex-end;border-bottom-right-radius:4px;}
         .chat-bubble.ai{background:var(--white);border:1px solid var(--border);color:var(--ink);align-self:flex-start;border-bottom-left-radius:4px;box-shadow:var(--sh-sm);}
         .chat-input-row{display:flex;gap:8px;padding:12px 0 20px;border-top:1px solid var(--border);flex-shrink:0;align-items:flex-end;}
-        .chat-input{flex:1;padding:12px 16px;border:1.5px solid var(--border2);border-radius:16px;font-size:14px;font-family:var(--sans);outline:none;resize:none;background:var(--white);min-height:44px;max-height:160px;line-height:1.5;overflow-y:auto;}
-        .chat-input:focus{border-color:var(--blue);}
+        .chat-input{flex:1;padding:12px 16px;border:1.5px solid var(--border2);border-radius:16px;font-size:14px;font-family:var(--sans);outline:none;resize:none;background:var(--white);height:48px;max-height:160px;line-height:1.5;overflow:hidden;}
+        .chat-input:focus{border-color:var(--blue);overflow-y:auto;}
         .chat-send{width:44px;height:44px;border-radius:50%;background:var(--grad);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;transition:opacity .15s;}
         .chat-send:hover{opacity:.85;}
         .chat-send:disabled{opacity:.4;cursor:not-allowed;}
@@ -711,8 +711,12 @@ export default function AppPage() {
               placeholder="Nhắn tin... hoặc đính kèm file 📎"
               onChange={e => {
                 setChatInput(e.target.value);
-                e.target.style.height = "auto";
-                e.target.style.height = Math.min(e.target.scrollHeight, 160) + "px";
+                // Grow textarea smoothly without layout jump
+                const ta = e.target;
+                ta.style.height = "48px";
+                const newH = Math.min(ta.scrollHeight, 160);
+                ta.style.height = newH + "px";
+                ta.style.overflow = newH >= 160 ? "auto" : "hidden";
               }}
               onKeyDown={e => {
                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
