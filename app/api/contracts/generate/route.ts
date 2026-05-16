@@ -116,15 +116,23 @@ export async function POST(req: Request) {
         if (!(k in safeValues)) safeValues[k] = v ?? "";
       }
 
-      const zip = new PizZip(buffer);
-      const doc = new Docxtemplater(zip, {
-        paragraphLoop: true,
-        linebreaks: true,
-        nullGetter: () => "___________",
-      });
-      doc.render(safeValues);
-      const filled = doc.getZip().generate({ type: "nodebuffer" });
-      const html = await convertToHtmlWithAlignment(filled);
+      try {
+        const zip = new PizZip(buffer);
+        const doc = new Docxtemplater(zip, {
+          paragraphLoop: true,
+          linebreaks: true,
+          nullGetter: () => "",
+          delimiters: { start: "{{", end: "}}" },
+        });
+        doc.render(safeValues);
+        const filled = doc.getZip().generate({ type: "nodebuffer" });
+        const html = await convertToHtmlWithAlignment(filled);
+        if (html) return NextResponse.json({ html });
+      } catch (docxErr) {
+        console.error("[generate] docxtemplater error, falling back to raw mammoth:", docxErr);
+      }
+      // Fallback: convert original DOCX to HTML without filling (better than empty)
+      const html = await convertToHtmlWithAlignment(buffer);
       return NextResponse.json({ html });
     }
 

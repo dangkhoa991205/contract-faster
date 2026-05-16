@@ -255,7 +255,9 @@ export default function AppPage() {
     setChatInput("");
     if (stagedFile) setPendingFile(null);
 
-    // Build history snapshot we can reference after async ops
+    // historyForApi = messages BEFORE current turn (sent as context, not duplicated with command)
+    const historyForApi = chatMsgs;
+    // historySnapshot = full local state including current user msg (for setChatMsgs)
     let historySnapshot = chatMsgs;
     let aiCommand = msg;
 
@@ -301,8 +303,10 @@ export default function AppPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          command: aiCommand || msg,
-          history: historySnapshot.map(m => {
+          command: aiCommand || msg || "Phân tích và giúp tôi tạo hợp đồng phù hợp.",
+          // For file uploads: historySnapshot includes file + AI response messages (context the AI needs)
+          // For text-only: use historyForApi (excludes current msg, which is sent as `command`)
+          history: (stagedFile ? historySnapshot : historyForApi).map(m => {
             let text = m.text;
             if (m.form) {
               text += `\n[Form: ${m.form.templateName} — fields: ${m.form.fields.map(f => f.label).join(", ")}]`;
@@ -327,13 +331,17 @@ export default function AppPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ templateId: data.templateId, fieldValues: data.fieldValues ?? {} }),
           });
-          const { html } = await genRes.json();
+          const genData = await genRes.json();
+          if (!genRes.ok || !genData.html) {
+            setChatMsgs(prev => [...prev, { role: "ai", text: `❌ Lỗi tạo hợp đồng: ${genData.error ?? "Không tạo được nội dung. Vui lòng thử lại."}` }]);
+            setChatGenerating(false);
+            return;
+          }
           const tpl = templates.find(t => t.id === data.templateId) ?? { id: data.templateId, name: data.templateName ?? "Hợp đồng", category: "", description: "", placeholders: [], fileUrl: "", createdAt: "" };
-          // Show preview inline in chat
           setChatMsgs(prev => [...prev, {
             role: "ai",
             text: "✅ Hợp đồng đã sẵn sàng! Bạn có thể xem bên dưới và xuất file.",
-            preview: { html, templateId: data.templateId as string, templateName: (data.templateName as string) ?? tpl.name, fieldValues: data.fieldValues as Record<string, string> ?? {} },
+            preview: { html: genData.html, templateId: data.templateId as string, templateName: (data.templateName as string) ?? tpl.name, fieldValues: (data.fieldValues as Record<string, string>) ?? {} },
           }]);
         } catch {
           setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi tạo hợp đồng. Bạn thử lại nhé!" }]);
@@ -366,12 +374,16 @@ export default function AppPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ templateId, fieldValues: values }),
       });
-      const { html } = await genRes.json();
-      setChatMsgs(prev => [...prev, {
-        role: "ai",
-        text: "✅ Hợp đồng đã sẵn sàng! Xem và xuất file bên dưới.",
-        preview: { html, templateId, templateName, fieldValues: values },
-      }]);
+      const genData = await genRes.json();
+      if (!genRes.ok || !genData.html) {
+        setChatMsgs(prev => [...prev, { role: "ai", text: `❌ Lỗi tạo hợp đồng: ${genData.error ?? "Vui lòng thử lại."}` }]);
+      } else {
+        setChatMsgs(prev => [...prev, {
+          role: "ai",
+          text: "✅ Hợp đồng đã sẵn sàng! Xem và xuất file bên dưới.",
+          preview: { html: genData.html, templateId, templateName, fieldValues: values },
+        }]);
+      }
     } catch {
       setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi tạo hợp đồng. Thử lại nhé!" }]);
     }
