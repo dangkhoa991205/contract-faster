@@ -142,7 +142,8 @@ export async function POST(req: Request) {
     return NextResponse.json({ html: filledHtml });
 
   } catch (err) {
-    console.error("[generate]", err);
-    return NextResponse.json({ error: "Generation failed" }, { status: 500 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[generate]", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
