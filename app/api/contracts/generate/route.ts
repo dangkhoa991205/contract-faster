@@ -16,7 +16,8 @@ import { convertToHtmlWithAlignment } from "@/lib/docx-html";
  */
 async function fillDotsStyle(
   docHtml: string,
-  fieldValues: Record<string, string>
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  fieldValues: Record<string, any>
 ): Promise<string> {
   // Find all ……… patterns (various lengths of dots/ellipsis)
   const blankPattern = /\.{3,}|…{2,}|(?:\.\.\.+)/g;
@@ -38,8 +39,8 @@ async function fillDotsStyle(
   }).join("\n");
 
   const fieldList = Object.entries(fieldValues)
-    .filter(([, v]) => v?.trim())
-    .map(([k, v]) => `${k}: ${v}`)
+    .filter(([, v]) => v != null && String(v).trim())
+    .map(([k, v]) => `${k}: ${String(v)}`)
     .join("\n");
 
   // Ask AI ONLY to return index→value mapping, never touch HTML
@@ -90,11 +91,8 @@ export async function POST(req: Request) {
   const buffer = await readDocxBuffer(template.fileUrl);
 
   try {
-    console.log("[generate:step1] extractRawText, buffer type:", typeof buffer, Buffer.isBuffer(buffer));
     const { value: rawText } = await mammoth.extractRawText({ buffer });
-    console.log("[generate:step2] rawText length:", rawText.length);
     const hasTokens = /\{\{[^}]+\}\}/.test(rawText);
-    console.log("[generate:step3] hasTokens:", hasTokens, "fieldValues type:", typeof fieldValues);
 
     if (hasTokens) {
       const tokenRegex = /\{\{([^}#/^@><!]+)\}\}/g;
@@ -104,7 +102,6 @@ export async function POST(req: Request) {
         const t = tok[1].trim();
         if (t && !t.startsWith("#") && !t.startsWith("/")) docxTokens.add(t);
       }
-      console.log("[generate:step4] tokens:", [...docxTokens]);
 
       // Coerce all incoming values to strings — AI may return numbers/null
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -121,7 +118,6 @@ export async function POST(req: Request) {
       for (const [k, v] of Object.entries(incoming)) {
         if (!(k in safeValues)) safeValues[k] = v == null ? "" : String(v);
       }
-      console.log("[generate:step5] safeValues keys:", Object.keys(safeValues));
 
       let filledBuffer: Buffer | null = null;
       try {
@@ -152,7 +148,7 @@ export async function POST(req: Request) {
 
     // ……… style — convert DOCX→HTML (preserves all structure/alignment), then fill blanks by position
     const docHtml = await convertToHtmlWithAlignment(buffer);
-    const filledHtml = await fillDotsStyle(docHtml, fieldValues as Record<string, string>);
+    const filledHtml = await fillDotsStyle(docHtml, fieldValues ?? {});
     return NextResponse.json({ html: filledHtml });
 
   } catch (err) {
