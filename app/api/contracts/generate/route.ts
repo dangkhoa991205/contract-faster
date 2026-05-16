@@ -119,6 +119,7 @@ export async function POST(req: Request) {
         if (!(k in safeValues)) safeValues[k] = v == null ? "" : String(v);
       }
 
+      let filledBuffer: Buffer | null = null;
       try {
         const zip = new PizZip(buffer);
         const doc = new Docxtemplater(zip, {
@@ -127,15 +128,21 @@ export async function POST(req: Request) {
           nullGetter: () => "",
         });
         doc.render(safeValues);
-        const filled = doc.getZip().generate({ type: "nodebuffer" });
-        const html = await convertToHtmlWithAlignment(filled);
-        if (html) return NextResponse.json({ html });
+        filledBuffer = doc.getZip().generate({ type: "nodebuffer" }) as Buffer;
       } catch (docxErr) {
-        const docxMsg = docxErr instanceof Error ? docxErr.message : JSON.stringify(docxErr);
-        console.error("[generate] docxtemplater error, falling back to raw mammoth:", docxMsg);
+        const stack = docxErr instanceof Error ? docxErr.stack : String(docxErr);
+        console.error("[generate:docxtemplater]", stack);
       }
-      // Fallback: convert original DOCX to HTML without filling (better than empty)
-      const html = await convertToHtmlWithAlignment(buffer);
+      try {
+        const srcBuffer = filledBuffer ?? buffer;
+        const html = await convertToHtmlWithAlignment(srcBuffer);
+        return NextResponse.json({ html });
+      } catch (htmlErr) {
+        const stack = htmlErr instanceof Error ? htmlErr.stack : String(htmlErr);
+        console.error("[generate:convertToHtml]", stack);
+      }
+      // Last resort — mammoth plain HTML with no alignment
+      const { value: html } = await mammoth.convertToHtml({ buffer });
       return NextResponse.json({ html });
     }
 
@@ -145,8 +152,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ html: filledHtml });
 
   } catch (err) {
+    const stack = err instanceof Error ? err.stack : String(err);
+    console.error("[generate:outer]", stack);
     const msg = err instanceof Error ? err.message : String(err);
-    console.error("[generate]", msg);
     return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
