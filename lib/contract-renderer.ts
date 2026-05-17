@@ -91,7 +91,7 @@ async function renderDotsStyle(
 ): Promise<RenderResult> {
   const docHtml = await convertToHtmlWithAlignment(buffer);
 
-  // Match runs of 2+ dots or ellipsis chars — captures all blank patterns
+  // Match runs of 2+ dots or ellipsis chars
   const blankPattern = /\.{2,}|…+/g;
   const blanks: { offset: number; len: number }[] = [];
   let bm: RegExpExecArray | null;
@@ -109,13 +109,23 @@ async function renderDotsStyle(
 
   if (!fieldList) return { html: docHtml, missingRequired: [] };
 
-  // Build context snippets — 200 chars each side, strip HTML tags
+  // Build FULL document text with each blank marked as [BLANK_N]
+  // This lets AI see the entire contract structure — no context confusion
   const stripHtml = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-  const snippets = blanks.map((b, i) => {
-    const before = stripHtml(docHtml.slice(Math.max(0, b.offset - 200), b.offset));
-    const after = stripHtml(docHtml.slice(b.offset + b.len, Math.min(docHtml.length, b.offset + b.len + 200)));
-    return `[${i}] ...${before} [___BLANK___] ${after}...`;
-  }).join("\n\n");
+  let markedText = "";
+  let lastPos = 0;
+  let idx = 0;
+  for (const b of blanks) {
+    markedText += stripHtml(docHtml.slice(lastPos, b.offset));
+    markedText += `[BLANK_${idx++}]`;
+    lastPos = b.offset + b.len;
+  }
+  markedText += stripHtml(docHtml.slice(lastPos));
+
+  // Truncate if extremely long (GPT-4o handles 128K but keep cost reasonable)
+  const docText = markedText.length > 8000
+    ? markedText.slice(0, 8000) + "...[truncated]"
+    : markedText;
 
   try {
     const completion = await openai.chat.completions.create({
@@ -125,19 +135,27 @@ async function renderDotsStyle(
       messages: [
         {
           role: "system",
-          content: `Bạn điền thông tin vào các chỗ trống [___BLANK___] trong hợp đồng.
+          content: `Bạn điền thông tin vào hợp đồng. Các chỗ trống được đánh dấu [BLANK_N].
 
 THÔNG TIN CÓ SẴN:
 ${fieldList}
 
-QUY TẮC:
-- Đọc kỹ ngữ cảnh TRƯỚC và SAU mỗi [___BLANK___] để biết ô đó cần điền gì
-- Chỉ điền khi có thông tin phù hợp với ngữ cảnh (tên → tên người, địa chỉ → địa chỉ, STK → số tài khoản...)
-- Không bịa thông tin, không điền nhầm trường
-- Trả về JSON: {"fills":{"0":"giá_trị","1":"giá_trị",...}}
-- Index không có thông tin phù hợp → bỏ qua (không đưa vào JSON)`,
+Đọc toàn bộ văn bản hợp đồng bên dưới, hiểu ngữ cảnh từng [BLANK_N], rồi điền đúng thông tin.
+
+QUY TẮC QUAN TRỌNG:
+- Ô "Ông/bà", "họ tên" → điền tên người
+- Ô "Hộ khẩu thường trú", "địa chỉ" → điền địa chỉ nhà/nơi ở (KHÔNG điền website/link)
+- Ô "Website", "fanpage", "địa chỉ website" → điền URL/link
+- Ô "STK", "số tài khoản" → điền dãy số tài khoản ngân hàng
+- Ô "Chủ tài khoản" → điền tên chủ tài khoản (tên người hoặc công ty)
+- Ô "Ngân hàng" → điền tên ngân hàng
+- Ô "do ... cấp" → điền tên cơ quan cấp CMND/CCCD
+- Ô "cấp ngày" → điền ngày cấp CMND/CCCD
+- Không bịa thông tin, không điền nhầm loại
+- BLANK không có dữ liệu phù hợp → bỏ qua
+- Trả về JSON: {"fills":{"0":"giá_trị","1":"giá_trị",...}}`,
         },
-        { role: "user", content: snippets },
+        { role: "user", content: docText },
       ],
     });
 
