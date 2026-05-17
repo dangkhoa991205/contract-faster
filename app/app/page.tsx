@@ -341,11 +341,25 @@ export default function AppPage() {
             return;
           }
           const tpl = templates.find(t => t.id === data.templateId) ?? { id: data.templateId, name: data.templateName ?? "Hợp đồng", category: "", description: "", placeholders: [], fileUrl: "", createdAt: "" };
+          const fv = (data.fieldValues as Record<string, string>) ?? {};
+          const missingLabels: string[] = genData.missingRequired ?? [];
+          const emptyFields = Object.entries(fv)
+            .filter(([, v]) => !v || !String(v).trim())
+            .map(([k]) => k.replace(/_/g, " "));
+          const allMissing = [...new Set([...missingLabels, ...emptyFields])];
+          // Show preview first
           setChatMsgs(prev => [...prev, {
-            role: "ai",
-            text: "✅ Hợp đồng đã sẵn sàng! Bạn có thể xem bên dưới và xuất file.",
-            preview: { html: genData.html, templateId: data.templateId as string, templateName: (data.templateName as string) ?? tpl.name, fieldValues: (data.fieldValues as Record<string, string>) ?? {} },
+            role: "ai" as const,
+            text: "📄 Đây là bản xem trước hợp đồng của bạn:",
+            preview: { html: genData.html, templateId: data.templateId as string, templateName: (data.templateName as string) ?? tpl.name, fieldValues: fv },
           }]);
+          // If missing fields, ask user for more info
+          if (allMissing.length > 0) {
+            setChatMsgs(prev => [...prev, {
+              role: "ai" as const,
+              text: `Tôi thấy hợp đồng còn thiếu một số thông tin:\n${allMissing.map(f => `• ${f}`).join("\n")}\n\nBạn có thể cung cấp thêm để tôi hoàn thiện không?`,
+            }]);
+          }
         } catch {
           setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi tạo hợp đồng. Bạn thử lại nhé!" }]);
         }
@@ -381,11 +395,22 @@ export default function AppPage() {
       if (!genRes.ok || !genData.html) {
         setChatMsgs(prev => [...prev, { role: "ai", text: `❌ Lỗi tạo hợp đồng: ${genData.error ?? "Vui lòng thử lại."}` }]);
       } else {
+        const missingLabels: string[] = genData.missingRequired ?? [];
+        const emptyFields = Object.entries(values)
+          .filter(([, v]) => !v || !String(v).trim())
+          .map(([k]) => k.replace(/_/g, " "));
+        const allMissing = [...new Set([...missingLabels, ...emptyFields])];
         setChatMsgs(prev => [...prev, {
-          role: "ai",
-          text: "✅ Hợp đồng đã sẵn sàng! Xem và xuất file bên dưới.",
+          role: "ai" as const,
+          text: "📄 Đây là bản xem trước hợp đồng của bạn:",
           preview: { html: genData.html, templateId, templateName, fieldValues: values },
         }]);
+        if (allMissing.length > 0) {
+          setChatMsgs(prev => [...prev, {
+            role: "ai" as const,
+            text: `Tôi thấy hợp đồng còn thiếu một số thông tin:\n${allMissing.map(f => `• ${f}`).join("\n")}\n\nBạn có thể cung cấp thêm để tôi hoàn thiện không?`,
+          }]);
+        }
       }
     } catch {
       setChatMsgs(prev => [...prev, { role: "ai", text: "Lỗi tạo hợp đồng. Thử lại nhé!" }]);
@@ -573,11 +598,16 @@ export default function AppPage() {
         .inline-form{background:var(--bg);border:1px solid var(--border);border-radius:var(--r-md);padding:18px;margin-top:12px;}
         .preview-card{background:var(--white);border:1px solid var(--border);border-radius:var(--r-md);margin-top:12px;overflow:hidden;max-width:100%;}
         .preview-card-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid var(--border);background:var(--bg);}
-        .preview-card-body{max-height:400px;overflow-y:auto;padding:24px 28px;font-family:'Times New Roman',Times,serif;font-size:13px;line-height:1.8;color:#1e293b;}
+        .preview-card-body{max-height:600px;overflow-y:auto;padding:32px 40px;font-family:'Times New Roman',Times,serif;font-size:13.5pt;line-height:1.8;color:#1e293b;background:#fff;}
+        .preview-card-body p{margin:0 0 6px 0;white-space:pre-wrap;}
         .preview-card-body p:not([style*="text-align"]){text-align:justify;}
-        .preview-card-body p{margin-bottom:8px;}
+        .preview-card-body h1,.preview-card-body h2,.preview-card-body h3{font-weight:700;text-align:center;margin:10px 0 6px;}
+        .preview-card-body strong,.preview-card-body b{font-weight:700;}
+        .preview-card-body u{text-decoration:underline;}
         .preview-card-body table{border-collapse:collapse;width:100%;margin:8px 0;}
-        .preview-card-body td,.preview-card-body th{border:1px solid #e2e8f0;padding:6px 10px;font-size:12px;}
+        .preview-card-body td,.preview-card-body th{border:1px solid #555;padding:5px 8px;font-size:13px;vertical-align:top;}
+        .preview-card-body ul,.preview-card-body ol{padding-left:20px;margin:4px 0;}
+        .preview-card-body li{margin-bottom:3px;}
 
         /* Page header */
         .page-header{margin-bottom:28px;}
