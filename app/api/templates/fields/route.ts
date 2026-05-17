@@ -33,7 +33,7 @@ export async function POST(req: Request) {
 
     if (tokens.length > 0) {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "cx/gpt-5.5",
         temperature: 0,
         messages: [
           { role: "system", content: `Return JSON array of fields with Vietnamese labels. Format: [{"name":"EXACT_VAR","label":"Nhãn tiếng Việt","type":"text|date|number|email"}]. Return ONLY the array.` },
@@ -47,7 +47,7 @@ export async function POST(req: Request) {
 
     // No {{}} — ask AI to identify fill-in fields from the raw text
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "cx/gpt-5.5",
       temperature: 0,
       messages: [
         {

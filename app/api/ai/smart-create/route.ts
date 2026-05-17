@@ -135,7 +135,7 @@ Luôn trả JSON hợp lệ, luôn dùng tiếng Việt.`;
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "cx/gpt-5.5",
       temperature: 0.4,
       response_format: { type: "json_object" },
       messages: [

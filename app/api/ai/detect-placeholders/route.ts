@@ -20,7 +20,7 @@ export async function POST(req: Request) {
   const { value: text } = await mammoth.extractRawText({ buffer });
 
   const completion = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "cx/gpt-5.5",
     messages: [
       {
         role: "system",

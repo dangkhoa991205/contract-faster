@@ -51,7 +51,7 @@ async function extractPlaceholders(buffer: Buffer): Promise<Array<{ name: string
 
     if (tokens.length > 0) {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "cx/gpt-5.5",
         temperature: 0,
         messages: [
           {
@@ -74,7 +74,7 @@ Return ONLY the JSON array, no explanation.`,
       }
     } else {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "cx/gpt-5.5",
         temperature: 0,
         messages: [
           {

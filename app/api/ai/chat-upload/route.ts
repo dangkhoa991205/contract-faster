@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     const dataUrl = `data:${mime};base64,${base64}`;
     try {
       const completion = await openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "cx/gpt-5.5",
         messages: [
           {
             role: "user",

@@ -42,7 +42,7 @@ Rules:
 
   try {
     const completion = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "cx/gpt-5.5",
       messages,
       temperature: 0.3,
       response_format: { type: "json_object" },
