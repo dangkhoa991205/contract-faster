@@ -7,7 +7,10 @@ function getOpenAI(): OpenAI {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY environment variable is not set");
   }
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const client = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+    baseURL: process.env.OPENAI_BASE_URL ?? undefined,
+  });
   if (process.env.NODE_ENV !== "production") globalForOpenAI.openai = client;
   return client;
 }
