@@ -27,7 +27,6 @@ export async function POST(req: Request) {
   <meta charset="utf-8" />
   <title>Hợp đồng</title>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Times+New+Roman&display=swap');
     * { box-sizing: border-box; margin: 0; padding: 0; }
     @page { margin: 15mm 20mm; }
     body {

@@ -31,7 +31,8 @@ export function normalizeFieldValues(
 function formatViNumber(numStr: string): string {
   const n = parseInt(numStr, 10);
   if (isNaN(n)) return numStr;
-  return n.toLocaleString("vi-VN");
+  // Manual formatter — avoids ICU locale availability issues on Vercel
+  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".");
 }
 
 /**
