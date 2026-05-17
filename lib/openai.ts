@@ -7,11 +7,11 @@ function getOpenAI(): OpenAI {
   if (!process.env.OPENAI_API_KEY) {
     throw new Error("OPENAI_API_KEY environment variable is not set");
   }
-  // Strip BOM and whitespace that PowerShell/CLI may inject into env vars
-  const baseURL = process.env.OPENAI_BASE_URL?.replace(/^﻿/, "").trim() || undefined;
+  // Strip BOM (U+FEFF) and whitespace that PowerShell/CLI injects into env vars
+  const stripBom = (s?: string) => s?.replace(/^﻿/, "").trim();
   const client = new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
-    baseURL,
+    apiKey: stripBom(process.env.OPENAI_API_KEY),
+    baseURL: stripBom(process.env.OPENAI_BASE_URL) || undefined,
   });
   if (process.env.NODE_ENV !== "production") globalForOpenAI.openai = client;
   return client;
