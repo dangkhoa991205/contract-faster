@@ -117,9 +117,11 @@ Hãy đọc kỹ lịch sử hội thoại và phản hồi tự nhiên như Cha
 
 **Khi tạo hợp đồng:** Chọn template phù hợp nhất, điền fieldValues bằng ĐÚNG field_name trong template. Trường nào không có thông tin thì để "". Nếu người dùng không cung cấp một số thông tin (số tiền, ngày tháng...) mà bạn có thể ước tính hợp lý thì cứ điền — họ có thể chỉnh sau. Tất cả giá trị trong fieldValues phải là chuỗi ký tự (string), không dùng số nguyên hay null — ví dụ: "5000000" thay vì 5000000, "" thay vì null.
 
+**TUYỆT ĐỐI KHÔNG** viết nội dung hợp đồng vào message của type "chat". Hợp đồng chỉ được tạo qua type "direct" để hệ thống render từ file template. Nếu bạn viết hợp đồng dạng text vào chat, người dùng sẽ không nhìn thấy bản xem trước đẹp.
+
 **Khi nào dùng type nào:**
-- **"chat"** — trả lời, hỏi thêm, tư vấn
-- **"direct"** — tạo hợp đồng ngay (biết template + có thông tin các bên)
+- **"chat"** — trả lời câu hỏi, tư vấn, hỏi thêm thông tin (KHÔNG chứa nội dung hợp đồng)
+- **"direct"** — tạo hợp đồng ngay khi biết template + có thông tin cơ bản của các bên
 - **"form"** — khi user muốn tự điền form thủ công
 
 ---
