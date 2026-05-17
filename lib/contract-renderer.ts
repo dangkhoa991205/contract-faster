@@ -91,24 +91,16 @@ async function renderDotsStyle(
 ): Promise<RenderResult> {
   const docHtml = await convertToHtmlWithAlignment(buffer);
 
-  const blankPattern = /\.{3,}|…{2,}/g;
-  const blanks: { offset: number }[] = [];
+  // Match runs of 2+ dots or ellipsis chars — captures all blank patterns
+  const blankPattern = /\.{2,}|…+/g;
+  const blanks: { offset: number; len: number }[] = [];
   let bm: RegExpExecArray | null;
-  const scanRegex = /\.{3,}|…{2,}/g;
+  const scanRegex = /\.{2,}|…+/g;
   while ((bm = scanRegex.exec(docHtml)) !== null) {
-    blanks.push({ offset: bm.index });
+    blanks.push({ offset: bm.index, len: bm[0].length });
   }
 
   if (blanks.length === 0) return { html: docHtml, missingRequired: [] };
-
-  // Build context snippets for AI
-  const snippets = blanks.map((b, i) => {
-    const ctx = docHtml
-      .slice(Math.max(0, b.offset - 80), b.offset + 80)
-      .replace(/<[^>]+>/g, "")
-      .trim();
-    return `[${i}] "${ctx}"`;
-  }).join("\n");
 
   const fieldList = Object.entries(fieldValues)
     .filter(([, v]) => v != null && String(v).trim())
@@ -116,6 +108,14 @@ async function renderDotsStyle(
     .join("\n");
 
   if (!fieldList) return { html: docHtml, missingRequired: [] };
+
+  // Build context snippets — 200 chars each side, strip HTML tags
+  const stripHtml = (s: string) => s.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+  const snippets = blanks.map((b, i) => {
+    const before = stripHtml(docHtml.slice(Math.max(0, b.offset - 200), b.offset));
+    const after = stripHtml(docHtml.slice(b.offset + b.len, Math.min(docHtml.length, b.offset + b.len + 200)));
+    return `[${i}] ...${before} [___BLANK___] ${after}...`;
+  }).join("\n\n");
 
   try {
     const completion = await openai.chat.completions.create({
@@ -125,12 +125,17 @@ async function renderDotsStyle(
       messages: [
         {
           role: "system",
-          content: `Danh sách chỗ trống trong hợp đồng (kèm ngữ cảnh) và thông tin cần điền.
-Trả về JSON: {"fills":{"0":"giá_trị","1":"giá_trị",...}}
-Chỉ điền index có thông tin phù hợp. Không điền thông tin không có. Không giải thích.
+          content: `Bạn điền thông tin vào các chỗ trống [___BLANK___] trong hợp đồng.
 
-Thông tin:
-${fieldList}`,
+THÔNG TIN CÓ SẴN:
+${fieldList}
+
+QUY TẮC:
+- Đọc kỹ ngữ cảnh TRƯỚC và SAU mỗi [___BLANK___] để biết ô đó cần điền gì
+- Chỉ điền khi có thông tin phù hợp với ngữ cảnh (tên → tên người, địa chỉ → địa chỉ, STK → số tài khoản...)
+- Không bịa thông tin, không điền nhầm trường
+- Trả về JSON: {"fills":{"0":"giá_trị","1":"giá_trị",...}}
+- Index không có thông tin phù hợp → bỏ qua (không đưa vào JSON)`,
         },
         { role: "user", content: snippets },
       ],

@@ -16,8 +16,8 @@ export function normalizeFieldValues(
   for (const [k, v] of Object.entries(raw ?? {})) {
     if (v == null) { result[k] = ""; continue; }
     let str = String(v).trim();
-    // Remove trailing dots AI adds (e.g. "1992.." or "Hà Nội.")
-    str = str.replace(/\.{2,}$/, "").trim();
+    // Remove trailing dots AI adds (e.g. "1992." or "Hà Nội..")
+    str = str.replace(/\.+$/, "").trim();
     // Format pure numbers that look like VND amounts (6+ digits = ≥100,000 đồng)
     // Use 6+ to avoid corrupting years (2024), IDs, and other 4-5 digit numbers
     if (/^\d{6,}$/.test(str)) {
